@@ -1,0 +1,168 @@
+* {
+    box-sizing: border-box;
+}
+
+html {
+    font-family: "Roboto Condensed", sans-serif;
+    line-height: 1.5;
+
+    color: #ebe7ef;
+    background: radial-gradient(#252525, #101010);
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+}
+
+h1 {
+    color: rgb(200, 200, 200);
+    font-family: "Roboto Condensed", sans-serif;
+    font-size: 35px;
+    text-align: left;
+    margin-top: 25px;
+    margin-bottom: 0px;
+}
+
+h2 {
+    color: rgb(150, 150, 150);
+    font-family: "Roboto Condensed", sans-serif;
+    text-align: center;
+    font-size: 30px;
+}
+
+h3 {
+    color: rgb(150, 150, 150);
+    font-family: "Roboto Condensed", sans-serif;
+    text-align: center;
+}
+
+table {
+    color: rgb(150, 150, 150);
+    font-family: "Roboto Condensed", sans-serif;
+    font-size: 16px;
+    text-align: center;
+    border-spacing: 5px;
+}
+
+p {
+    margin: 0;
+    font-size: 1.25rem;
+    font-family: "Roboto Condensed", sans-serif;
+}
+
+a {
+    color: rgb(150, 150, 150);
+}
+
+a:link {
+    text-decoration: none;
+}
+
+a:visited {
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: none;
+}
+
+a:active {
+    text-decoration: none;
+}
+
+th,
+td {
+    padding: 10px;
+}
+
+tr:nth-child(odd) {
+    background-color: rgb(20, 20, 20);
+}
+
+.center {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+img {
+    border: 1px solid #767676;
+    border-radius: 8px;
+    padding: 5px;
+    width: 60px;
+}
+
+section {
+    padding: 1rem;
+    border-radius: 6px;
+    background-color: #202020;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+section li {
+    text-align: center;
+}
+
+section li h3 {
+    margin: 0.5rem 0;
+}
+
+section li p {
+    font-size: 0.9rem;
+}
+
+input {
+    text-align: center;
+}
+
+button {
+    margin: 0.5rem 0;
+    background-color: #505050;
+    border: none;
+    color: white;
+    padding: 15px 30px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #333333;
+}
+
+.loaderText {
+    font-size: 12px;
+    padding-bottom: 6px;
+}
+
+.loader {
+    margin: auto;
+    border: 5px solid #555555;
+    border-radius: 50%;
+    border-top: 5px solid #eeeeee;
+    width: 45px;
+    height: 45px;
+    animation: spinner 2s linear infinite;
+}
+
+@keyframes spinner {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
