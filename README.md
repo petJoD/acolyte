@@ -1,5 +1,3 @@
-<link href="style.css" rel="stylesheet" />
-
 # acolyte
 
 Repository for all tools that may be useful for acolyte tasks set by Mistress Erica.
@@ -12,3 +10,7 @@ Repository for all tools that may be useful for acolyte tasks set by Mistress Er
 ## WFM scanner
 
 * [task counter](task_counter.html)
+
+## gif tools
+
+* [ezgif](https://ezgif.com/video-to-gif)
