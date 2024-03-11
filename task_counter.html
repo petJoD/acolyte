@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+
+    <title>Single-Day Task Report</title>
+
+	<style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            font-family: "Roboto Condensed", sans-serif;
+            line-height: 1.5;
+
+            color: #ebe7ef;
+            background: radial-gradient(#252525, #101010);
+
+            font-synthesis: none;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        h1 {
+            color: rgb(200, 200, 200);
+            font-family: "Roboto Condensed", sans-serif;
+            font-size: 35px;
+            text-align: left;
+            margin-top: 25px;
+            margin-bottom: 0px;
+        }
+
+        h2 {
+            color: rgb(150, 150, 150);
+            font-family: "Roboto Condensed", sans-serif;
+            text-align: center;
+            font-size: 30px;
+        }
+
+        h3 {
+            color: rgb(150, 150, 150);
+            font-family: "Roboto Condensed", sans-serif;
+            text-align: center;
+        }
+
+        table {
+            color: rgb(150, 150, 150);
+            font-family: "Roboto Condensed", sans-serif;
+            font-size: 16px;
+            text-align: center;
+            border-spacing: 5px;
+        }
+
+        p {
+            margin: 0;
+            font-size: 1.25rem;
+            font-family: "Roboto Condensed", sans-serif;
+        }
+
+        a {
+            color: rgb(150, 150, 150);
+        }
+
+        a:link {
+            text-decoration: none;
+        }
+
+        a:visited {
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: none;
+        }
+
+        a:active {
+            text-decoration: none;
+        }
+
+        th,
+        td {
+            padding: 10px;
+        }
+
+        tr:nth-child(odd) {
+            background-color: rgb(20, 20, 20);
+        }
+
+        .center {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        img {
+            border: 1px solid #767676;
+            border-radius: 8px;
+            padding: 5px;
+            width: 60px;
+        }
+
+        section {
+            padding: 1rem;
+            border-radius: 6px;
+            background-color: #202020;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        section ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        section li {
+            text-align: center;
+        }
+
+        section li h3 {
+            margin: 0.5rem 0;
+        }
+
+        section li p {
+            font-size: 0.9rem;
+        }
+
+        input {
+            text-align: center;
+        }
+
+        button {
+            margin: 0.5rem 0;
+            background-color: #505050;
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #333333;
+        }
+
+        .loaderText {
+            font-size: 12px;
+            padding-bottom: 6px;
+        }
+
+        .loader {
+            margin: auto;
+            border: 5px solid #555555;
+            border-radius: 50%;
+            border-top: 5px solid #eeeeee;
+            width: 45px;
+            height: 45px;
+            animation: spinner 2s linear infinite;
+        }
+
+        @keyframes spinner {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+
+    <script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.7.0.js"></script>
+
+    <script type="text/javascript">
+
+        let isDST;
+        let checkbox;
+
+        $(document).ready(function () {
+
+            checkbox = document.getElementById('dstCheck');
+            isDST = checkbox.checked;
+
+            let nytCurrentTime = document.getElementById('nytCurrentTime');
+
+            let newYorkTime = new Date();
+            newYorkTime.setHours(newYorkTime.getHours() - 5);               // New York Standard Time
+            nytCurrentTime.innerHTML = "<b>" + newYorkTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: "UTC" }) + "</b>";
+
+            checkbox.addEventListener('change', function () {
+                isDST = checkbox.checked;
+                newYorkTime = new Date();
+                newYorkTime.setHours(newYorkTime.getHours() - (isDST ? 4 : 5));
+                nytCurrentTime.innerHTML = "<b>" + newYorkTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: "UTC" }) + "</b>";
+            });
+
+        });
+
+        async function createReport() {
+
+            let taskID = document.getElementById('taskId').value;
+            let taskLinesBooty = document.getElementById('taskLinesBooty').value;
+            let inputDateStart = document.getElementById('datePickerStart').value;
+            let inputDateEnd = document.getElementById('datePickerEnd').value;
+
+            let button = document.getElementById('submitButton');
+            let loader = document.getElementById("loader");
+            let loaderText = document.getElementById("loaderText");
+
+            if (taskID.length == 0) {
+                alert("Please provide a Task ID to create the report.");
+            } else if (inputDateStart.length == 0 || inputDateEnd.length == 0) {
+                alert("Please select the starting and ending day.");
+            } else {
+
+                button.disabled = true;
+                checkbox.disabled = true;
+
+                let table = document.getElementById("reportTable");
+                table.innerHTML = "";
+
+                document.getElementById("taskName").hidden = true;
+                document.getElementById("taskName").innerHTML = "";
+
+                loader.hidden = false;
+                loaderText.innerHTML = "Retrieving tasks from <b>WFM</b>...";
+                loaderText.hidden = false;
+
+                let urlAJAX = "https://api.writeforme.org/api/v1/getSolutions";
+                let limitSetting = 25;
+                let listTypeSetting = "taskSolutions";
+                let querySetting = "";
+                let skipSetting = 0;
+                let sortAscSetting = false;
+                let sortBySetting = "created";
+                let taskSetting = taskID;
+
+                let records = 0;
+
+                let totalRecords = 0;
+
+                let taskIdData;
+                let taskNameData;
+
+                let recordFound = false;
+
+                let wfmResponseOk = true;
+
+                let typistDateFiltered = new Array();
+
+                let reportDateStart = new Date(inputDateStart);
+                let reportDateEnd = new Date(inputDateEnd);
+
+                // New York Time timezone adjustment + 3HRS Heaven
+
+                reportDateStart.setHours(reportDateStart.getHours() + (isDST ? 6 : 7));         // Adds 6 or 7 hrs
+                reportDateStart.setMinutes(reportDateStart.getMinutes() + 59);                  // Adds 59 minutes
+                reportDateStart.setSeconds(reportDateStart.getSeconds() + 59);                  // Adds 59 seconds
+
+                // One day range with New York Time timezone adjustment + 3HRS Heaven
+
+                reportDateEnd.setDate(reportDateEnd.getDate() + 1);                             // Adds 1 day
+                reportDateEnd.setHours(reportDateEnd.getHours() + (isDST ? 7 : 8));             // Adds 7 or 8 hrs
+
+                function retrieveDataWFM() {
+
+                    return new Promise(function (resolve, reject) {
+
+                        $.ajax({
+                            type: "POST",
+                            url: urlAJAX,
+                            contentType: "application/json",
+                            data: JSON.stringify({
+                                limit: limitSetting,
+                                listType: listTypeSetting,
+                                query: querySetting,
+                                skip: skipSetting,
+                                sortAsc: sortAscSetting,
+                                sortBy: sortBySetting,
+                                task: taskSetting
+                            }),
+                            success: function (data) {
+
+                                totalRecords = data.totalCount;
+
+                                taskIdData = data.solutions[0].task._id;
+                                taskNameData = data.solutions[0].task.name;
+
+                                for (let index = 0; index < data.solutions.length; index++) {
+
+                                    const element = data.solutions[index];
+
+                                    let userDate = new Date(element.created);
+
+                                    if (userDate.getTime() > reportDateStart.getTime() && userDate.getTime() < reportDateEnd.getTime()) {
+                                        recordFound = true;
+                                        typistDateFiltered.push(
+                                            {
+                                                name: element.userName,
+                                                userId: element.realUser != null ? element.realUser._id : "DELETED USER",
+                                                photo: element.realUser != null ? element.realUser.lowPhoto : undefined,
+                                                time: element.totalTime,
+                                                mistakes: element.mistakes,
+                                                date: element.created
+                                            }
+                                        );
+                                    } else if (recordFound) {
+                                        continueApiRequests = false;
+                                        break;
+                                    }
+                                }
+
+                                records += limitSetting;
+                                skipSetting += 25;
+
+                                if (continueApiRequests) {
+                                    setTimeout(resolve, 3000);                                          // 3 second cooldown before a new request to WFM is sent
+                                } else {
+                                    resolve();
+                                }
+
+                            },
+                            error: function (request, status, error) {
+                                wfmResponseOk = false;
+                                alert("WFM Response Error:\n" + request.responseText);
+                                reject();
+                            }
+                        });
+
+                    });
+
+                }
+
+                let noWfmError = true;
+
+                let continueApiRequests = true;
+
+                while (records <= totalRecords && continueApiRequests && noWfmError) {
+                    await retrieveDataWFM().catch(() => noWfmError = false);
+                }
+
+                loader.hidden = true;
+                loaderText.innerHTML = "Done.";
+                loaderText.hidden = true;
+
+                if (wfmResponseOk) {
+
+                    let groupedData = typistDateFiltered.reduce((previous, current) => {
+
+                        if (previous.hasOwnProperty(current.name)) {
+
+                            previous[current.name].count++;
+                            previous[current.name].time = previous[current.name].time + current.time;
+                            previous[current.name].mistakes = previous[current.name].mistakes + current.mistakes;
+
+                        } else {
+
+                            previous[current.name] = {
+                                name: current.name,
+                                userId: current.userId,
+                                photo: current.photo,
+                                time: current.time,
+                                mistakes: current.mistakes,
+                                count: 1
+                            };
+
+                        }
+
+                        return previous;
+
+                    }, {});
+
+                    let typistsNames = Object.keys(groupedData);
+
+                    let totalTaskCount = 0;
+                    let totalTimeCount = 0;
+                    let totalMistakeCount = 0;
+
+                    typistsNames.forEach(function (element) {
+                        
+                        totalTaskCount = totalTaskCount + groupedData[element].count;
+                        totalTimeCount = totalTimeCount + groupedData[element].time;
+                        totalMistakeCount = totalMistakeCount + groupedData[element].mistakes;
+
+                    });
+
+                    function padTo2Digits(num) {
+                        return num.toString().padStart(2, '0');
+                    }
+
+                    function convertMsToTime(milliseconds) {
+
+                        let seconds = Math.floor(milliseconds / 1000);
+                        let minutes = Math.floor(seconds / 60);
+                        let hours = Math.floor(minutes / 60);
+
+                        seconds = seconds % 60;
+                        minutes = minutes % 60;
+
+                        return padTo2Digits(hours) + ":" + padTo2Digits(minutes) + ":" + padTo2Digits(seconds);
+
+                    }
+
+                    let header = table.createTHead();
+
+                    let headerRow = header.insertRow();
+
+                    let headerTitle1 = headerRow.insertCell(0);
+                    let headerTitle2 = headerRow.insertCell(1);
+                    let headerTitle3 = headerRow.insertCell(2);
+                    let headerTitle4 = headerRow.insertCell(3);
+                    let headerTitle5 = headerRow.insertCell(4);
+                    let headerTitle6 = headerRow.insertCell(5);
+                    let headerTitle7;
+                    if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                        headerTitle7 = headerRow.insertCell(6);
+                    }
+
+                    if (typistDateFiltered.length != 0) {
+
+                        document.getElementById("taskName").innerHTML = "<h2><a href='https://writeforme.org/task/" + taskIdData + "' target='_blank'>" + taskNameData + "</a></h2>";
+                        document.getElementById("taskName").hidden = false;
+
+                        headerTitle1.innerHTML = "<b>WFM USER ID</b>";
+                        headerTitle2.innerHTML = "<b>USER</b>";
+                        headerTitle3.innerHTML = "<b>NAME</b>";
+                        headerTitle4.innerHTML = "<b>COUNT</b>";
+                        headerTitle5.innerHTML = "<b>MISTAKES</b>";
+                        headerTitle6.innerHTML = "<b>H:M:S</b>";
+                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                            headerTitle7.innerHTML = "<b>LINES</b>";
+                        }
+
+                    } else {
+
+                        headerTitle1.innerHTML = "<";
+                        headerTitle2.innerHTML = "📝";
+                        headerTitle3.innerHTML = "-";
+                        headerTitle4.innerHTML = "<b>NO COMPLETIONS FOUND ON SELECTED DAY</b>";
+                        headerTitle5.innerHTML = "-";
+                        headerTitle6.innerHTML = ">";
+                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                            headerTitle7.innerHTML = ">";
+                        }
+
+                    }
+
+                    let row;
+
+                    typistsNames.forEach(function (element) {
+
+                        row = table.insertRow();
+
+                        let cell1 = row.insertCell(0);
+                        let cell2 = row.insertCell(1);
+                        let cell3 = row.insertCell(2);
+                        let cell4 = row.insertCell(3);
+                        let cell5 = row.insertCell(4);
+                        let cell6 = row.insertCell(5);
+                        let cell7;
+                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                            cell7 = row.insertCell(6);
+                        }
+
+                        cell1.innerHTML = groupedData[element].userId;
+                        cell2.innerHTML = groupedData[element].photo == undefined || groupedData[element].photo.length === 0 ? "<a href='https://writeforme.org/profile/" + (groupedData[element].userId == "DELETED USER" ? "" : groupedData[element].userId) + "' target='_blank'>No Photo</a>" : "<a href='https://writeforme.org/profile/" + groupedData[element].userId + "' target='_blank'><img src='data:image/jpeg;base64," + groupedData[element].photo + "'></a>";
+                        cell3.innerHTML = "<a href='https://writeforme.org/profile/" + (groupedData[element].userId == "DELETED USER" ? "" : groupedData[element].userId) + "' target='_blank'>" + groupedData[element].name + "</a>";
+                        cell4.innerHTML = "<b>" + groupedData[element].count + "</b>";
+                        cell5.innerHTML = new Intl.NumberFormat().format(groupedData[element].mistakes);
+                        cell6.innerHTML = convertMsToTime(groupedData[element].time);
+                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                            cell7.innerHTML = "<b>" + new Intl.NumberFormat().format(groupedData[element].count * taskLinesBooty) + "</b>";
+                        }
+
+                        cell4.style = "color: white;"
+
+                    });
+
+                    if (typistDateFiltered.length != 0) {
+
+                        row = table.insertRow();
+
+                        let cell5 = row.insertCell(0);
+                        let cell6 = row.insertCell(1);
+                        let cell7 = row.insertCell(2);
+                        let cell8 = row.insertCell(3);
+                        let cell9 = row.insertCell(4);
+                        let cell10 = row.insertCell(5);
+                        let cell11;
+                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                            cell11 = row.insertCell(6);
+                        }
+
+                        cell5.innerHTML = "<b>TASK ARCHIVE:</b>";
+                        cell6.innerHTML = "<b>" + new Intl.NumberFormat().format(totalRecords) + "</b>";
+                        cell7.innerHTML = "<b>TOTALS:</b>";
+                        cell8.innerHTML = "<b>" + new Intl.NumberFormat().format(totalTaskCount) + "</b>";
+                        cell9.innerHTML = "<b>" + new Intl.NumberFormat().format(totalMistakeCount) + "</b>";
+                        cell10.innerHTML = "<b>" + convertMsToTime(totalTimeCount) + "</b>";
+                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                            cell11.innerHTML = "<b>" + new Intl.NumberFormat().format(totalTaskCount * taskLinesBooty) + "</b>";
+                        }
+
+                        cell5.style = "background-color: #2a2a2a;"
+                        cell6.style = "background-color: #2a2a2a;"
+                        cell7.style = "color: white; font-size: 15px; font-weight: bold; background-color: #2a2a2a;"
+                        cell8.style = "color: white; font-size: 25px; font-weight: 500; background-color: #2a2a2a;"
+                        cell9.style = "background-color: #2a2a2a;"
+                        cell10.style = "background-color: #2a2a2a;"
+                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                            cell11.style = "color: white; font-size: 25px; font-weight: 500; background-color: #2a2a2a;"
+                        }
+
+                    }
+
+                }
+
+                button.disabled = false;
+                checkbox.disabled = false;
+
+            }
+
+        }
+
+    </script>
+</head>
+
+<body>
+
+    <h1>Task Counter</h1>
+    <b>Mistress Erica</b> Edition<br>
+    Ver. 3.1<br><br>
+
+    <section>
+        <ul>
+            <li>
+                <h3>New York Time</h3>
+                <p id="nytCurrentTime">
+                    -- : --
+                </p>
+            </li>
+            <li>
+                <h3>DST</h3>
+                <p>
+                    <input type="checkbox" id="dstCheck" />
+                </p>
+            </li>
+            <li>
+                <h3>Starting Day</h3>
+                <p>
+                    <input type="date" id="datePickerStart" />
+                </p>
+            </li>
+            <li>
+                <h3>Ending Day</h3>
+                <p>
+                    <input type="date" id="datePickerEnd" />
+                </p>
+            </li>
+            <li>
+                <h3>WFM Task ID</h3>
+                <p>
+                    <input type="text" id="taskId" size="30" />
+                </p>
+            </li>
+            <li>
+                <h3>Lines/Booty</h3>
+                <p>
+                    <input type="number" id="taskLinesBooty" size="10" min="0" value="0" />
+                </p>
+            </li>
+            <li>
+                <button id="submitButton" onclick="createReport()" :hover>Submit</button>
+            </li>
+        </ul>
+    </section>
+    <br>
+    <section id="taskName" hidden>
+    </section>
+    <br>
+    <table class="center" id="reportTable">
+    </table>
+    <br>
+    <center>
+        <div id="loaderText" class="loaderText" hidden></div>
+        <div id="loader" class="loader" hidden></div>
+    </center>
+    <br>
+    <br>
+    <br>
+    <section>
+        <h3>Heaven's Slavery System © 2023</h3>
+    </section>
+
+</body>
+
+</html>
