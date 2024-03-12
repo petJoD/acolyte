@@ -10,6 +10,7 @@ Repository for all tools that may be useful for acolyte tasks set by Mistress Er
 ## WFM scanner
 
 * [task counter](task_counter.html)
+* [domestic chores loop on a page](domestic_chores.html)
 
 ## gif tools
 
