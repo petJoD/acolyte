@@ -16,7 +16,6 @@
         const loopIds = ["652bd8356aaf8c0037702a26", "652bd7736aaf8c00376ffc80", "652bd6566aaf8c00376fb0a9", "652bd4476aaf8c00376f3b65", "652bd2f96aaf8c00376eedaf", "652bd2416aaf8c00376ec7f6"];
         const loopNames = ["(1) Make the Bed", "(2) Feed the Fish", "(3) Check the Mail", "(4) Water the Plants", "(5) Wash the Dishes", "(6) Take Out the Garbage"];
         
-        let isDST;
         const tzid = Intl.DateTimeFormat().resolvedOptions().timeZone;
         console.log("local time zone is " + tzid);
 
@@ -51,7 +50,6 @@
         async function createReport() {
 
             let taskID = document.getElementById('taskId').value;
-
             let inputDateStart = document.getElementById('datePickerStart').value;
             let inputDateEnd = document.getElementById('datePickerEnd').value;
 
@@ -78,23 +76,22 @@
                 let tBody = table.getElementsByTagName('tbody')[0];
                 tBody.innerHTML = "";
                 let tFoot = table.getElementsByTagName('tfoot')[0];
-
                 let taskNameField = table.getElementsByTagName('caption')[0];
-
+                
                 let taskNumberStr = new Intl.NumberFormat().format(taskIndex+1);
-                taskNameField.innerHTML = "<h2><a href='https://writeforme.org/task/" + taskID + "' target='_blank'>" + loopNames[taskIndex] + "</a></h2>";
+                taskNameField.innerHTML = "<h3><a href='https://writeforme.org/task/" + taskID + "' target='_blank'>" + loopNames[taskIndex] + "</a></h3>";
                 loader.hidden = false;
                 loaderText.innerHTML = "Retrieving tasks from <b>WFM</b>...";
                 loaderText.hidden = false;
 
-                let urlAJAX = "https://api.writeforme.org/api/v1/getSolutions";
-                let limitSetting = 10;
-                let listTypeSetting = "taskSolutions";
-                let querySetting = "";
+                const urlAJAX = "https://api.writeforme.org/api/v1/getSolutions";
+                const limitSetting = 10;
+                const listTypeSetting = "taskSolutions";
+                const querySetting = "";
                 let skipSetting = 0;
-                let sortAscSetting = false;
-                let sortBySetting = "created";
-                let taskSetting = taskID;
+                const sortAscSetting = false;
+                const sortBySetting = "created";
+                const taskSetting = taskID;
 
                 let records = 0;
 
@@ -108,9 +105,9 @@
 
                 let typistCompletions = new Array();
 
-                let reportDateStart = DateTime.fromISO(inputDateStart)
+                const reportDateStart = DateTime.fromISO(inputDateStart)
                     .setZone("America/Los_Angeles", { keepLocalTime: true }).startOf('day');
-                let reportDateEnd = DateTime.fromISO(inputDateEnd)
+                const reportDateEnd = DateTime.fromISO(inputDateEnd)
                     .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
 
                 function retrieveDataWFM() {
@@ -164,7 +161,7 @@
                                 skipSetting += limitSetting;
 
                                 if (continueApiRequests) {
-                                    setTimeout(resolve, 2000);                                          // 3 second cooldown before a new request to WFM is sent
+                                    setTimeout(resolve, 2000);  // 2 second cooldown before a new request to WFM is sent
                                 } else {
                                     resolve();
                                 }
@@ -197,7 +194,7 @@
                     }
 
                     let row;
-
+                    let ignored = 0;
                     typistCompletions.forEach(function (element) {
 
                         row = tBody.insertRow();
@@ -210,6 +207,7 @@
                         cell2.innerHTML = "<a href='https://writeforme.org/profile/" + (element.userId == "DELETED USER" ? "" : element.userId) + "' target='_blank'>" + element.name + "</a>";
                         cell3.innerHTML = element.date.toFormat('yyyy-MM-dd HH:mm:ss');
                         if (element.date < reportDateStart || element.date > reportDateEnd) {
+                            ++ignored;
                             cell3.style = "color: red;";
                         }
                     });
@@ -219,7 +217,7 @@
                         let cell7 = tFoot.children[0].children[2];
 
                         cell5.innerHTML = new Intl.NumberFormat().format(totalRecords);
-                        cell7.innerHTML = new Intl.NumberFormat().format(typistCompletions.length);
+                        cell7.innerHTML = new Intl.NumberFormat().format(typistCompletions.length - ignored);
                     }
                 }
                 button.disabled = false;
