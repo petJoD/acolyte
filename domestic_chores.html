@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+
+    <title>Domestic Chores Loop Helper</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+
+    <script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.7.0.js"></script>
+    <script type="text/javascript" language="javascript" src=" https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js "></script>
+
+    <script type="text/javascript">
+        let DateTime = luxon.DateTime;
+
+        const loopIds = ["652bd8356aaf8c0037702a26", "652bd7736aaf8c00376ffc80", "652bd6566aaf8c00376fb0a9", "652bd4476aaf8c00376f3b65", "652bd2f96aaf8c00376eedaf", "652bd2416aaf8c00376ec7f6"];
+        const loopNames = ["(1) Make the Bed", "(2) Feed the Fish", "(3) Check the Mail", "(4) Water the Plants", "(5) Wash the Dishes", "(6) Take Out the Garbage"];
+        
+        let isDST;
+        const tzid = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        console.log("local time zone is " + tzid);
+
+        $(document).ready(function () {
+
+            let datePickerStart = document.getElementById('datePickerStart');
+            let datePickerEnd = document.getElementById('datePickerEnd');
+
+            let startTime = document.getElementById('startTime');
+            let endTime = document.getElementById('endTime');
+
+            let onStartChange = function () {
+                const pacificTime = DateTime.fromISO(datePickerStart.value)
+                    .setZone("America/Los_Angeles", { keepLocalTime: true }).startOf('day');
+                const localTime = pacificTime.setZone(tzid);
+                startTime.innerHTML = "<b>" + pacificTime.toLocaleString(DateTime.DATETIME_MED) + " Pacific Time<br>"
+                    + localTime.toLocaleString(DateTime.DATETIME_MED) + " local Time</b>";            
+            };
+            let onEndChange = function() {
+                const pacificTime = DateTime.fromISO(datePickerEnd.value)
+                    .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
+                const localTime = pacificTime.setZone(tzid);
+                endTime.innerHTML = "<b>" + pacificTime.toLocaleString(DateTime.DATETIME_MED) + " Pacific Time<br>"
+                    + localTime.toLocaleString(DateTime.DATETIME_MED) + " local Time</b>";            
+            };
+            onStartChange();
+            onEndChange();
+            datePickerStart.addEventListener('change', onStartChange);
+            datePickerEnd.addEventListener('change', onEndChange);
+        });
+
+        async function createReport() {
+
+            let taskID = document.getElementById('taskId').value;
+
+            let inputDateStart = document.getElementById('datePickerStart').value;
+            let inputDateEnd = document.getElementById('datePickerEnd').value;
+
+            let button = document.getElementById('submitButton');
+            let loader = document.getElementById("loader");
+            let loaderText = document.getElementById("loaderText");
+
+            if (taskID.length == 0) {
+                alert("Please provide a Task ID to create the report.");
+            } else if (inputDateStart.length == 0 || inputDateEnd.length == 0) {
+                alert("Please select the starting and ending day.");
+            } else {
+
+                button.disabled = true;
+                let taskIndex = 0;
+                for (let index = 0; index < loopIds.length; index++) {
+                    if (loopIds[index] == taskID) {
+                        taskIndex = index;
+                        break;
+                    }
+                }
+
+                let table = document.getElementById("reportTable"+taskIndex);
+                let tBody = table.getElementsByTagName('tbody')[0];
+                tBody.innerHTML = "";
+                let tFoot = table.getElementsByTagName('tfoot')[0];
+
+                let taskNameField = table.getElementsByTagName('caption')[0];
+
+                let taskNumberStr = new Intl.NumberFormat().format(taskIndex+1);
+                taskNameField.innerHTML = "<h2><a href='https://writeforme.org/task/" + taskID + "' target='_blank'>" + loopNames[taskIndex] + "</a></h2>";
+                loader.hidden = false;
+                loaderText.innerHTML = "Retrieving tasks from <b>WFM</b>...";
+                loaderText.hidden = false;
+
+                let urlAJAX = "https://api.writeforme.org/api/v1/getSolutions";
+                let limitSetting = 10;
+                let listTypeSetting = "taskSolutions";
+                let querySetting = "";
+                let skipSetting = 0;
+                let sortAscSetting = false;
+                let sortBySetting = "created";
+                let taskSetting = taskID;
+
+                let records = 0;
+
+                let totalRecords = 0;
+
+                let taskIdData;
+                let taskNameData;
+
+                let wfmResponseOk = true;
+                let continueApiRequests = true;
+
+                let typistCompletions = new Array();
+
+                let reportDateStart = DateTime.fromISO(inputDateStart)
+                    .setZone("America/Los_Angeles", { keepLocalTime: true }).startOf('day');
+                let reportDateEnd = DateTime.fromISO(inputDateEnd)
+                    .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
+
+                function retrieveDataWFM() {
+
+                    return new Promise(function (resolve, reject) {
+
+                        $.ajax({
+                            type: "POST",
+                            url: urlAJAX,
+                            contentType: "application/json",
+                            data: JSON.stringify({
+                                limit: limitSetting,
+                                listType: listTypeSetting,
+                                query: querySetting,
+                                skip: skipSetting,
+                                sortAsc: sortAscSetting,
+                                sortBy: sortBySetting,
+                                task: taskSetting
+                            }),
+                            success: function (data) {
+                                if (totalRecords == 0) {
+                                    totalRecords = data.totalCount;
+                                }
+                                else if (totalRecords != data.totalCount) {
+                                    alert("Record number changed during task crawling.");
+                                }
+                                taskIdData = data.solutions[0].task._id;
+                                taskNameData = data.solutions[0].task.name;
+
+                                for (let index = 0; index < data.solutions.length; index++) {
+
+                                    const element = data.solutions[index];
+
+                                    let userDate = DateTime.fromISO(element.created);
+                                    typistCompletions.push(
+                                        {
+                                            name: element.userName,
+                                            userId: element.realUser != null ? element.realUser._id : "DELETED USER",
+                                            photo: element.realUser != null ? element.realUser.lowPhoto : undefined,
+                                            time: element.totalTime,
+                                            mistakes: element.mistakes,
+                                            date: userDate
+                                        }
+                                    );
+                                    if (userDate < reportDateStart) {
+                                        continueApiRequests = false;
+                                    }
+                                }
+
+                                records += limitSetting;
+                                skipSetting += limitSetting;
+
+                                if (continueApiRequests) {
+                                    setTimeout(resolve, 2000);                                          // 3 second cooldown before a new request to WFM is sent
+                                } else {
+                                    resolve();
+                                }
+
+                            },
+                            error: function (request, status, error) {
+                                wfmResponseOk = false;
+                                alert("WFM Response Error:\n" + request.responseText);
+                                reject();
+                            }
+                        });
+
+                    });
+
+                }
+
+                let noWfmError = true;
+
+                while (records <= totalRecords && continueApiRequests && noWfmError) {
+                    await retrieveDataWFM().catch(() => noWfmError = false);
+                }
+
+                loader.hidden = true;
+                loaderText.innerHTML = "Done.";
+                loaderText.hidden = true;
+
+                if (wfmResponseOk) {
+                    if (typistCompletions.length != 0) {
+                        taskNameField.innerHTML = "<a href='https://writeforme.org/task/" + taskIdData + "' target='_blank'>" + taskNameData + "</a>";
+                    }
+
+                    let row;
+
+                    typistCompletions.forEach(function (element) {
+
+                        row = tBody.insertRow();
+
+                        let cell1 = row.insertCell(0);
+                        let cell2 = row.insertCell(1);
+                        let cell3 = row.insertCell(2);
+
+                        cell1.innerHTML = taskNumberStr;
+                        cell2.innerHTML = "<a href='https://writeforme.org/profile/" + (element.userId == "DELETED USER" ? "" : element.userId) + "' target='_blank'>" + element.name + "</a>";
+                        cell3.innerHTML = element.date.toFormat('yyyy-MM-dd HH:mm:ss');
+                        if (element.date < reportDateStart || element.date > reportDateEnd) {
+                            cell3.style = "color: red;";
+                        }
+                    });
+
+                    if (typistCompletions.length != 0) {
+                        let cell5 = tFoot.children[0].children[0];
+                        let cell7 = tFoot.children[0].children[2];
+
+                        cell5.innerHTML = new Intl.NumberFormat().format(totalRecords);
+                        cell7.innerHTML = new Intl.NumberFormat().format(typistCompletions.length);
+                    }
+                }
+                button.disabled = false;
+            }
+        }
+    </script>
+</head>
+
+<body>
+
+
+    <section>
+        <ul>
+            <li>
+                <h3>Domestic Chores Loop Helper</h1>
+                <b>Mistress Erica</b> Edition<br>
+                Ver. 1.0
+            </li>
+            <li>
+                <h3>Starting Day</h3>
+                <p>
+                    <input type="date" id="datePickerStart" value="2024-03-12"/>
+                </p>
+                <p id="startTime"> ? </p>
+            </li>
+            <li>
+                <h3>Ending Day</h3>
+                <p>
+                    <input type="date" id="datePickerEnd" value="2024-03-17"/>
+                </p>
+                <p id="endTime"> ? </p>
+            </li>
+            <li>
+                <h3>WFM Task</h3>
+                <p>
+                    <select name="task" id="taskId">
+                        <option value="652bd8356aaf8c0037702a26">(1) Make the Bed</option>
+                        <option value="652bd7736aaf8c00376ffc80">(2) Feed the Fish</option>
+                        <option value="652bd6566aaf8c00376fb0a9">(3) Check the Mail</option>
+                        <option value="652bd4476aaf8c00376f3b65">(4) Water the Plants</option>
+                        <option value="652bd2f96aaf8c00376eedaf">(5) Wash the Dishes</option>
+                        <option value="652bd2416aaf8c00376ec7f6">(6) Take Out the Garbage</option>
+                    </select>
+                </p>
+            </li>
+            <li>
+                <button id="submitButton" onclick="createReport()" :hover>Get data</button>
+            </li>
+
+            <li>
+                <h3>Heaven's Acolytes Tools © 2023-2024</h3>
+            </li>
+        </ul>
+    </section>
+    <center>
+        <div id="loaderText" class="loaderText" hidden></div>
+        <div id="loader" class="loader" hidden></div>
+    </center>
+    <br>
+    <table class="center" id="reportTable0">
+        <caption>Make the Bed</caption>
+        <thead><tr><th>#</th><th>WFM Name</th><th>Time</th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr><td></td><td>in WFM, seen:</td><td></td></tr></tfoot>
+    </table>
+    <table class="center" id="reportTable1">
+        <caption>Feed the Fish</caption>
+        <thead><tr><th>#</th><th>WFM Name</th><th>Time</th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr><td></td><td>in WFM, seen:</td><td></td></tr></tfoot>
+    </table>
+    <table class="center" id="reportTable2">
+        <caption>Check the Mail</caption>
+        <thead><tr><th>#</th><th>WFM Name</th><th>Time</th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr><td></td><td>in WFM, seen:</td><td></td></tr></tfoot>
+    </table>
+    <table class="center" id="reportTable3">
+        <caption>Water the Plants</caption>
+        <thead><tr><th>#</th><th>WFM Name</th><th>Time</th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr><td></td><td>in WFM, seen:</td><td></td></tr></tfoot>
+    </table>
+    <table class="center" id="reportTable4">
+        <caption>Wash the Dishes</caption>
+        <thead><tr><th>#</th><th>WFM Name</th><th>Time</th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr><td></td><td>in WFM, seen:</td><td></td></tr></tfoot>
+    </table>
+    <table class="center" id="reportTable5">
+        <caption>Take Out the Garbage</caption>
+        <thead><tr><th>#</th><th>WFM Name</th><th>Time</th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr><td></td><td>in WFM, seen:</td><td></td></tr></tfoot>
+    </table>
+    <br>
+</body>
+
+</html>
