@@ -133,6 +133,7 @@
                                 }
                                 else if (totalRecords != data.totalCount) {
                                     alert("Record number changed during task crawling.");
+                                    totalRecords = data.totalCount;
                                 }
                                 taskIdData = data.solutions[0].task._id;
                                 taskNameData = data.solutions[0].task.name;
