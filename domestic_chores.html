@@ -35,11 +35,16 @@
                     + localTime.toLocaleString(DateTime.DATETIME_MED) + " local Time</b>";            
             };
             let onEndChange = function() {
-                const pacificTime = DateTime.fromISO(datePickerEnd.value)
-                    .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
-                const localTime = pacificTime.setZone(tzid);
-                endTime.innerHTML = "<b>" + pacificTime.toLocaleString(DateTime.DATETIME_MED) + " Pacific Time<br>"
-                    + localTime.toLocaleString(DateTime.DATETIME_MED) + " local Time</b>";            
+                const exceptEndTime = DateTime.fromSeconds(1710691200);
+                const easternTime = exceptEndTime.setZone("America/New_York");
+                const localTime = exceptEndTime.setZone(tzid);
+                endTime.innerHTML = "<b>" + easternTime.toLocaleString(DateTime.DATETIME_MED) + " Eastern Time<br>"
+                    + localTime.toLocaleString(DateTime.DATETIME_MED) + " local Time</b>"; 
+                // const pacificTime = DateTime.fromISO(datePickerEnd.value)
+                //    .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
+                // const localTime = pacificTime.setZone(tzid);
+                // endTime.innerHTML = "<b>" + pacificTime.toLocaleString(DateTime.DATETIME_MED) + " Pacific Time<br>"
+                //     + localTime.toLocaleString(DateTime.DATETIME_MED) + " local Time</b>";            
             };
             onStartChange();
             onEndChange();
@@ -246,9 +251,9 @@
             </li>
             <li>
                 <h3>Ending Day</h3>
-                <p>
+            <!--    <p>
                     <input type="date" id="datePickerEnd" value="2024-03-17"/>
-                </p>
+                </p> -->
                 <p id="endTime"> ? </p>
             </li>
             <li>
