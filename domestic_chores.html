@@ -22,7 +22,7 @@
         $(document).ready(function () {
 
             let datePickerStart = document.getElementById('datePickerStart');
-            let datePickerEnd = document.getElementById('datePickerEnd');
+            //let datePickerEnd = document.getElementById('datePickerEnd');
 
             let startTime = document.getElementById('startTime');
             let endTime = document.getElementById('endTime');
@@ -49,14 +49,14 @@
             onStartChange();
             onEndChange();
             datePickerStart.addEventListener('change', onStartChange);
-            datePickerEnd.addEventListener('change', onEndChange);
+            //datePickerEnd.addEventListener('change', onEndChange);
         });
 
         async function createReport() {
 
             let taskID = document.getElementById('taskId').value;
             let inputDateStart = document.getElementById('datePickerStart').value;
-            let inputDateEnd = document.getElementById('datePickerEnd').value;
+            //let inputDateEnd = document.getElementById('datePickerEnd').value;
 
             let button = document.getElementById('submitButton');
             let loader = document.getElementById("loader");
@@ -64,7 +64,7 @@
 
             if (taskID.length == 0) {
                 alert("Please provide a Task ID to create the report.");
-            } else if (inputDateStart.length == 0 || inputDateEnd.length == 0) {
+            } else if (inputDateStart.length == 0 /*|| inputDateEnd.length == 0*/) {
                 alert("Please select the starting and ending day.");
             } else {
 
@@ -112,9 +112,10 @@
 
                 const reportDateStart = DateTime.fromISO(inputDateStart)
                     .setZone("America/Los_Angeles", { keepLocalTime: true }).startOf('day');
-                const reportDateEnd = DateTime.fromISO(inputDateEnd)
-                    .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
-
+                //const reportDateEnd = DateTime.fromISO(inputDateEnd)
+                //    .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
+                const reportDateEnd = DateTime.fromSeconds(1710691200);
+                
                 function retrieveDataWFM() {
 
                     return new Promise(function (resolve, reject) {
