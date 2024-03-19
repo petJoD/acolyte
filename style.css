@@ -85,8 +85,13 @@ tr:nth-child(odd) {
     background-color: rgb(20, 20, 20);
 }
 
-.center {
+.elem {
     float: left;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.center {
     margin-left: auto;
     margin-right: auto;
 }
