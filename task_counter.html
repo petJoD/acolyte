@@ -14,30 +14,197 @@
         let isDST;
         let checkbox;
 
-        $(document).ready(function () {
+        let typistDateFiltered = new Array();
+        let taskIdData;
+        let taskNameData;
+        let totalRecords = 0;
 
-            checkbox = document.getElementById('dstCheck');
-            isDST = checkbox.checked;
+        function updateResultTable(table, totalRecords) {
+            let taskLinesBooty = document.getElementById('taskLinesBooty').value;
+            let sortMethod = document.getElementById('sortSelect').value;
 
-            let nytCurrentTime = document.getElementById('nytCurrentTime');
+            let groupedData = typistDateFiltered.reduce((previous, current) => {
 
-            let newYorkTime = new Date();
-            newYorkTime.setHours(newYorkTime.getHours() - 5);               // New York Standard Time
-            nytCurrentTime.innerHTML = "<b>" + newYorkTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: "UTC" }) + "</b>";
+                if (previous.hasOwnProperty(current.name)) {
 
-            checkbox.addEventListener('change', function () {
-                isDST = checkbox.checked;
-                newYorkTime = new Date();
-                newYorkTime.setHours(newYorkTime.getHours() - (isDST ? 4 : 5));
-                nytCurrentTime.innerHTML = "<b>" + newYorkTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: "UTC" }) + "</b>";
+                    previous[current.name].count++;
+                    previous[current.name].time = previous[current.name].time + current.time;
+                    previous[current.name].mistakes = previous[current.name].mistakes + current.mistakes;
+
+                } else {
+
+                    previous[current.name] = {
+                        name: current.name,
+                        userId: current.userId,
+                        photo: current.photo,
+                        time: current.time,
+                        mistakes: current.mistakes,
+                        count: 1
+                    };
+
+                }
+
+                return previous;
+
+            }, {});
+
+            let typistsNames = Object.keys(groupedData);
+            const ac_array = ["petitJ", "Devan", "julie6b"];
+            if (sortMethod == "name") {
+                typistsNames.sort(function (a, b) {
+                    let c0 = ac_array.indexOf(b) - ac_array.indexOf(a);
+                    if (c0 != 0) return c0;
+                    return Intl.Collator().compare(a,b);
+                });
+            }
+
+            let totalTaskCount = 0;
+            let totalTimeCount = 0;
+            let totalMistakeCount = 0;
+
+            typistsNames.forEach(function (element) {
+
+                totalTaskCount = totalTaskCount + groupedData[element].count;
+                totalTimeCount = totalTimeCount + groupedData[element].time;
+                totalMistakeCount = totalMistakeCount + groupedData[element].mistakes;
+
             });
 
-        });
+            function padTo2Digits(num) {
+                return num.toString().padStart(2, '0');
+            }
+
+            function convertMsToTime(milliseconds) {
+
+                let seconds = Math.floor(milliseconds / 1000);
+                let minutes = Math.floor(seconds / 60);
+                let hours = Math.floor(minutes / 60);
+
+                seconds = seconds % 60;
+                minutes = minutes % 60;
+
+                return padTo2Digits(hours) + ":" + padTo2Digits(minutes) + ":" + padTo2Digits(seconds);
+
+            }
+
+            let header = table.createTHead();
+
+            let headerRow = header.insertRow();
+
+            let headerTitle1 = headerRow.insertCell(0);
+            let headerTitle2 = headerRow.insertCell(1);
+            let headerTitle3 = headerRow.insertCell(2);
+            let headerTitle4 = headerRow.insertCell(3);
+            let headerTitle5 = headerRow.insertCell(4);
+            let headerTitle6 = headerRow.insertCell(5);
+            let headerTitle7;
+            if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                headerTitle7 = headerRow.insertCell(6);
+            }
+
+            if (typistDateFiltered.length != 0) {
+
+                document.getElementById("taskName").innerHTML = "<h2><a href='https://writeforme.org/task/" + taskIdData + "' target='_blank'>" + taskNameData + "</a></h2>";
+                document.getElementById("taskName").hidden = false;
+
+                headerTitle1.innerHTML = "<b>WFM USER ID</b>";
+                headerTitle2.innerHTML = "<b>USER</b>";
+                headerTitle3.innerHTML = "<b>NAME</b>";
+                headerTitle4.innerHTML = "<b>COUNT</b>";
+                headerTitle5.innerHTML = "<b>MISTAKES</b>";
+                headerTitle6.innerHTML = "<b>H:M:S</b>";
+                if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                    headerTitle7.innerHTML = "<b>LINES</b>";
+                }
+
+            } else {
+
+                headerTitle1.innerHTML = "<";
+                headerTitle2.innerHTML = "📝";
+                headerTitle3.innerHTML = "-";
+                headerTitle4.innerHTML = "<b>NO COMPLETIONS FOUND ON SELECTED DAY</b>";
+                headerTitle5.innerHTML = "-";
+                headerTitle6.innerHTML = ">";
+                if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                    headerTitle7.innerHTML = ">";
+                }
+
+            }
+
+            let row;
+
+            typistsNames.forEach(function (element) {
+
+                row = table.insertRow();
+
+                let cell1 = row.insertCell(0);
+                let cell2 = row.insertCell(1);
+                let cell3 = row.insertCell(2);
+                let cell4 = row.insertCell(3);
+                let cell5 = row.insertCell(4);
+                let cell6 = row.insertCell(5);
+                let cell7;
+                if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                    cell7 = row.insertCell(6);
+                }
+
+                cell1.innerHTML = groupedData[element].userId;
+                cell2.innerHTML = groupedData[element].photo == undefined || groupedData[element].photo.length === 0 ? "<a href='https://writeforme.org/profile/" + (groupedData[element].userId == "DELETED USER" ? "" : groupedData[element].userId) + "' target='_blank'>No Photo</a>" : "<a href='https://writeforme.org/profile/" + groupedData[element].userId + "' target='_blank'><img src='data:image/jpeg;base64," + groupedData[element].photo + "'></a>";
+                cell3.innerHTML = "<a href='https://writeforme.org/profile/" + (groupedData[element].userId == "DELETED USER" ? "" : groupedData[element].userId) + "' target='_blank'>" + groupedData[element].name + "</a>";
+                cell4.innerHTML = "<b>" + groupedData[element].count + "</b>";
+                cell5.innerHTML = new Intl.NumberFormat().format(groupedData[element].mistakes);
+                cell6.innerHTML = convertMsToTime(groupedData[element].time);
+                if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                    cell7.innerHTML = "<b>" + new Intl.NumberFormat().format(groupedData[element].count * taskLinesBooty) + "</b>";
+                }
+
+                cell4.style = "color: white;"
+
+            });
+
+            if (typistDateFiltered.length != 0) {
+
+                row = table.insertRow();
+
+                let cell5 = row.insertCell(0);
+                let cell6 = row.insertCell(1);
+                let cell7 = row.insertCell(2);
+                let cell8 = row.insertCell(3);
+                let cell9 = row.insertCell(4);
+                let cell10 = row.insertCell(5);
+                let cell11;
+                if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                    cell11 = row.insertCell(6);
+                }
+
+                cell5.innerHTML = "<b>TASK ARCHIVE:</b>";
+                cell6.innerHTML = "<b>" + new Intl.NumberFormat().format(totalRecords) + "</b>";
+                cell7.innerHTML = "<b>TOTALS:</b>";
+                cell8.innerHTML = "<b>" + new Intl.NumberFormat().format(totalTaskCount) + "</b>";
+                cell9.innerHTML = "<b>" + new Intl.NumberFormat().format(totalMistakeCount) + "</b>";
+                cell10.innerHTML = "<b>" + convertMsToTime(totalTimeCount) + "</b>";
+                if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                    cell11.innerHTML = "<b>" + new Intl.NumberFormat().format(totalTaskCount * taskLinesBooty) + "</b>";
+                }
+
+                cell5.style = "background-color: #2a2a2a;"
+                cell6.style = "background-color: #2a2a2a;"
+                cell7.style = "color: white; font-size: 15px; font-weight: bold; background-color: #2a2a2a;"
+                cell8.style = "color: white; font-size: 25px; font-weight: 500; background-color: #2a2a2a;"
+                cell9.style = "background-color: #2a2a2a;"
+                cell10.style = "background-color: #2a2a2a;"
+                if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                    cell11.style = "color: white; font-size: 25px; font-weight: 500; background-color: #2a2a2a;"
+                }
+
+            }
+
+        }
 
         async function createReport() {
 
             let taskID = document.getElementById('taskId').value;
-            let taskLinesBooty = document.getElementById('taskLinesBooty').value;
+
             let inputDateStart = document.getElementById('datePickerStart').value;
             let inputDateEnd = document.getElementById('datePickerEnd').value;
 
@@ -74,17 +241,14 @@
                 let taskSetting = taskID;
 
                 let records = 0;
-
-                let totalRecords = 0;
-
-                let taskIdData;
-                let taskNameData;
+                
+                totalRecords = 0;
 
                 let recordFound = false;
 
                 let wfmResponseOk = true;
 
-                let typistDateFiltered = new Array();
+                typistDateFiltered.length = 0;
 
                 let reportDateStart = new Date(inputDateStart);
                 let reportDateEnd = new Date(inputDateEnd);
@@ -182,175 +346,7 @@
                 loaderText.hidden = true;
 
                 if (wfmResponseOk) {
-
-                    let groupedData = typistDateFiltered.reduce((previous, current) => {
-
-                        if (previous.hasOwnProperty(current.name)) {
-
-                            previous[current.name].count++;
-                            previous[current.name].time = previous[current.name].time + current.time;
-                            previous[current.name].mistakes = previous[current.name].mistakes + current.mistakes;
-
-                        } else {
-
-                            previous[current.name] = {
-                                name: current.name,
-                                userId: current.userId,
-                                photo: current.photo,
-                                time: current.time,
-                                mistakes: current.mistakes,
-                                count: 1
-                            };
-
-                        }
-
-                        return previous;
-
-                    }, {});
-
-                    let typistsNames = Object.keys(groupedData);
-
-                    let totalTaskCount = 0;
-                    let totalTimeCount = 0;
-                    let totalMistakeCount = 0;
-
-                    typistsNames.forEach(function (element) {
-                        
-                        totalTaskCount = totalTaskCount + groupedData[element].count;
-                        totalTimeCount = totalTimeCount + groupedData[element].time;
-                        totalMistakeCount = totalMistakeCount + groupedData[element].mistakes;
-
-                    });
-
-                    function padTo2Digits(num) {
-                        return num.toString().padStart(2, '0');
-                    }
-
-                    function convertMsToTime(milliseconds) {
-
-                        let seconds = Math.floor(milliseconds / 1000);
-                        let minutes = Math.floor(seconds / 60);
-                        let hours = Math.floor(minutes / 60);
-
-                        seconds = seconds % 60;
-                        minutes = minutes % 60;
-
-                        return padTo2Digits(hours) + ":" + padTo2Digits(minutes) + ":" + padTo2Digits(seconds);
-
-                    }
-
-                    let header = table.createTHead();
-
-                    let headerRow = header.insertRow();
-
-                    let headerTitle1 = headerRow.insertCell(0);
-                    let headerTitle2 = headerRow.insertCell(1);
-                    let headerTitle3 = headerRow.insertCell(2);
-                    let headerTitle4 = headerRow.insertCell(3);
-                    let headerTitle5 = headerRow.insertCell(4);
-                    let headerTitle6 = headerRow.insertCell(5);
-                    let headerTitle7;
-                    if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                        headerTitle7 = headerRow.insertCell(6);
-                    }
-
-                    if (typistDateFiltered.length != 0) {
-
-                        document.getElementById("taskName").innerHTML = "<h2><a href='https://writeforme.org/task/" + taskIdData + "' target='_blank'>" + taskNameData + "</a></h2>";
-                        document.getElementById("taskName").hidden = false;
-
-                        headerTitle1.innerHTML = "<b>WFM USER ID</b>";
-                        headerTitle2.innerHTML = "<b>USER</b>";
-                        headerTitle3.innerHTML = "<b>NAME</b>";
-                        headerTitle4.innerHTML = "<b>COUNT</b>";
-                        headerTitle5.innerHTML = "<b>MISTAKES</b>";
-                        headerTitle6.innerHTML = "<b>H:M:S</b>";
-                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                            headerTitle7.innerHTML = "<b>LINES</b>";
-                        }
-
-                    } else {
-
-                        headerTitle1.innerHTML = "<";
-                        headerTitle2.innerHTML = "📝";
-                        headerTitle3.innerHTML = "-";
-                        headerTitle4.innerHTML = "<b>NO COMPLETIONS FOUND ON SELECTED DAY</b>";
-                        headerTitle5.innerHTML = "-";
-                        headerTitle6.innerHTML = ">";
-                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                            headerTitle7.innerHTML = ">";
-                        }
-
-                    }
-
-                    let row;
-
-                    typistsNames.forEach(function (element) {
-
-                        row = table.insertRow();
-
-                        let cell1 = row.insertCell(0);
-                        let cell2 = row.insertCell(1);
-                        let cell3 = row.insertCell(2);
-                        let cell4 = row.insertCell(3);
-                        let cell5 = row.insertCell(4);
-                        let cell6 = row.insertCell(5);
-                        let cell7;
-                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                            cell7 = row.insertCell(6);
-                        }
-
-                        cell1.innerHTML = groupedData[element].userId;
-                        cell2.innerHTML = groupedData[element].photo == undefined || groupedData[element].photo.length === 0 ? "<a href='https://writeforme.org/profile/" + (groupedData[element].userId == "DELETED USER" ? "" : groupedData[element].userId) + "' target='_blank'>No Photo</a>" : "<a href='https://writeforme.org/profile/" + groupedData[element].userId + "' target='_blank'><img src='data:image/jpeg;base64," + groupedData[element].photo + "'></a>";
-                        cell3.innerHTML = "<a href='https://writeforme.org/profile/" + (groupedData[element].userId == "DELETED USER" ? "" : groupedData[element].userId) + "' target='_blank'>" + groupedData[element].name + "</a>";
-                        cell4.innerHTML = "<b>" + groupedData[element].count + "</b>";
-                        cell5.innerHTML = new Intl.NumberFormat().format(groupedData[element].mistakes);
-                        cell6.innerHTML = convertMsToTime(groupedData[element].time);
-                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                            cell7.innerHTML = "<b>" + new Intl.NumberFormat().format(groupedData[element].count * taskLinesBooty) + "</b>";
-                        }
-
-                        cell4.style = "color: white;"
-
-                    });
-
-                    if (typistDateFiltered.length != 0) {
-
-                        row = table.insertRow();
-
-                        let cell5 = row.insertCell(0);
-                        let cell6 = row.insertCell(1);
-                        let cell7 = row.insertCell(2);
-                        let cell8 = row.insertCell(3);
-                        let cell9 = row.insertCell(4);
-                        let cell10 = row.insertCell(5);
-                        let cell11;
-                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                            cell11 = row.insertCell(6);
-                        }
-
-                        cell5.innerHTML = "<b>TASK ARCHIVE:</b>";
-                        cell6.innerHTML = "<b>" + new Intl.NumberFormat().format(totalRecords) + "</b>";
-                        cell7.innerHTML = "<b>TOTALS:</b>";
-                        cell8.innerHTML = "<b>" + new Intl.NumberFormat().format(totalTaskCount) + "</b>";
-                        cell9.innerHTML = "<b>" + new Intl.NumberFormat().format(totalMistakeCount) + "</b>";
-                        cell10.innerHTML = "<b>" + convertMsToTime(totalTimeCount) + "</b>";
-                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                            cell11.innerHTML = "<b>" + new Intl.NumberFormat().format(totalTaskCount * taskLinesBooty) + "</b>";
-                        }
-
-                        cell5.style = "background-color: #2a2a2a;"
-                        cell6.style = "background-color: #2a2a2a;"
-                        cell7.style = "color: white; font-size: 15px; font-weight: bold; background-color: #2a2a2a;"
-                        cell8.style = "color: white; font-size: 25px; font-weight: 500; background-color: #2a2a2a;"
-                        cell9.style = "background-color: #2a2a2a;"
-                        cell10.style = "background-color: #2a2a2a;"
-                        if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                            cell11.style = "color: white; font-size: 25px; font-weight: 500; background-color: #2a2a2a;"
-                        }
-
-                    }
-
+                    updateResultTable(table, totalRecords);
                 }
 
                 button.disabled = false;
@@ -360,6 +356,32 @@
 
         }
 
+        
+        $(document).ready(function () {
+
+            checkbox = document.getElementById('dstCheck');
+            isDST = checkbox.checked;
+
+            let nytCurrentTime = document.getElementById('nytCurrentTime');
+
+            let newYorkTime = new Date();
+            newYorkTime.setHours(newYorkTime.getHours() - 5);               // New York Standard Time
+            nytCurrentTime.innerHTML = "<b>" + newYorkTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: "UTC" }) + "</b>";
+
+            checkbox.addEventListener('change', function () {
+                isDST = checkbox.checked;
+                newYorkTime = new Date();
+                newYorkTime.setHours(newYorkTime.getHours() - (isDST ? 4 : 5));
+                nytCurrentTime.innerHTML = "<b>" + newYorkTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: "UTC" }) + "</b>";
+            });
+
+            let sortSelect = document.getElementById('sortSelect');
+            sortSelect.addEventListener('change', function(){
+                let table = document.getElementById("reportTable");
+                table.innerHTML = "";
+                updateResultTable(table, totalRecords);
+            });
+        });
     </script>
 </head>
 
@@ -378,7 +400,7 @@
                 </p>
             </li>
             <li>
-                <h3>DST</h3>
+                <label for="dstCheck">DST</label>
                 <p>
                     <input type="checkbox" id="dstCheck" />
                 </p>
@@ -409,6 +431,13 @@
             </li>
             <li>
                 <button id="submitButton" onclick="createReport()" :hover>Submit</button>
+            </li>
+            <li>
+                <label for="sortSelect">Sort by</label>
+                <select name="sort" id="sortSelect">
+                    <option value="tally" selected>Last completion task (most recent first)</option>
+                    <option value="name">WFM name (A to Z)</option>
+                </select>
             </li>
         </ul>
     </section>

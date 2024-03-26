@@ -132,6 +132,19 @@ section li p {
     font-size: 0.9rem;
 }
 
+
+section li label {
+    margin: 0.5rem 0;
+}
+
+label {
+    color: rgb(150, 150, 150);
+    font-family: "Roboto Condensed", sans-serif;
+    text-align: center;
+    font-size: 18px;
+    display: block;
+}
+
 input {
     text-align: center;
 }
