@@ -282,7 +282,7 @@
                                 task: taskSetting
                             }),
                             success: function (data) {
-
+                                loaderText.innerHTML = "Received " + data.solutions.length + " tasks, handling them...";
                                 totalRecords = data.totalCount;
 
                                 taskIdData = data.solutions[0].task._id;
@@ -316,6 +316,7 @@
                                 skipSetting += 25;
 
                                 if (continueApiRequests) {
+                                    loaderText.innerHTML = "Waiting 3s before asking again (seen " + records + " tasks so far)...";
                                     setTimeout(resolve, 3000);                                          // 3 second cooldown before a new request to WFM is sent
                                 } else {
                                     resolve();
@@ -341,16 +342,17 @@
                     await retrieveDataWFM().catch(() => noWfmError = false);
                 }
 
-                loader.hidden = true;
-                loaderText.innerHTML = "Done.";
-                loaderText.hidden = true;
+                loaderText.innerHTML = "Building result table now.";
 
                 if (wfmResponseOk) {
                     updateResultTable(table, totalRecords);
                 }
 
+                loaderText.innerHTML = "Done.";
+                loaderText.hidden = true;
                 button.disabled = false;
                 checkbox.disabled = false;
+                loader.hidden = true;
 
             }
 
