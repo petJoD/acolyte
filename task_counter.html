@@ -283,7 +283,13 @@
                             }),
                             success: function (data) {
                                 loaderText.innerHTML = "Received " + data.solutions.length + " tasks, handling them...";
-                                totalRecords = data.totalCount;
+                                if (totalRecords == 0) {
+                                    totalRecords = data.totalCount;
+                                }
+                                else if (totalRecords != data.totalCount) {
+                                    alert("Record number changed since data retrieval start. Restart to avoid false results.");
+                                    totalRecords = data.totalCount;
+                                }
 
                                 taskIdData = data.solutions[0].task._id;
                                 taskNameData = data.solutions[0].task.name;
