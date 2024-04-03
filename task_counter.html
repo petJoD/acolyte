@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css" href="style.css" />
 
     <script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.7.0.js"></script>
+    <script type="text/javascript" language="javascript" src="scripts/avatar.js"></script>
 
     <script type="text/javascript">
 
@@ -116,8 +117,8 @@
                 if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
                     headerTitle7.innerHTML = "<b>LINES</b>";
                 }
-
-            } else {
+            } 
+            else {
 
                 headerTitle1.innerHTML = "<";
                 headerTitle2.innerHTML = "📝";
@@ -149,8 +150,22 @@
                 }
 
                 cell1.innerHTML = groupedData[element].userId;
-                cell2.innerHTML = groupedData[element].photo == undefined || groupedData[element].photo.length === 0 ? "<a href='https://writeforme.org/profile/" + (groupedData[element].userId == "DELETED USER" ? "" : groupedData[element].userId) + "' target='_blank'>No Photo</a>" : "<a href='https://writeforme.org/profile/" + groupedData[element].userId + "' target='_blank'><img src='data:image/jpeg;base64," + groupedData[element].photo + "'></a>";
-                cell3.innerHTML = "<a href='https://writeforme.org/profile/" + (groupedData[element].userId == "DELETED USER" ? "" : groupedData[element].userId) + "' target='_blank'>" + groupedData[element].name + "</a>";
+                let elem = cell2;
+                if (groupedData[element].userId != "DELETED USER") {
+                    let link = document.createElement("a");
+                    link.setAttribute("href","https://writeforme.org/profile/"+groupedData[element].userId);
+                    link.setAttribute("target","_blank");
+                    cell2.appendChild(link);
+                    elem = link;
+                }
+                if (groupedData[element].photo == undefined || groupedData[element].photo.length === 0) {
+                    const h = acolyte.avatar.hashText(groupedData[element].userId);
+                    acolyte.avatar.drawAvatar(h, elem, 60);
+                }
+                else {
+                    elem.innerHTML = "<img src='data:image/jpeg;base64," + groupedData[element].photo + "'>";
+                }
+                cell3.innerHTML = groupedData[element].userId == "DELETED USER" ? groupedData[element].name : "<a href='https://writeforme.org/profile/" + groupedData[element].userId + "' target='_blank'>" + groupedData[element].name + "</a>";
                 cell4.innerHTML = "<b>" + groupedData[element].count + "</b>";
                 cell5.innerHTML = new Intl.NumberFormat().format(groupedData[element].mistakes);
                 cell6.innerHTML = convertMsToTime(groupedData[element].time);
