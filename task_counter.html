@@ -8,23 +8,36 @@
     <link rel="stylesheet" type="text/css" href="style.css" />
 
     <script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.7.0.js"></script>
+    <script type="text/javascript" language="javascript" src=" https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js "></script>
     <script type="text/javascript" language="javascript" src="scripts/avatar.js"></script>
 
     <script type="text/javascript">
+        let DateTime = luxon.DateTime;
+        const tzid = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-        let isDST;
-        let checkbox;
-
-        let typistDateFiltered = new Array();
+        let typistCompletions = [];
         let taskIdData;
         let taskNameData;
         let totalRecords = 0;
+        let reportDateStart;
+        let reportDateEnd;
+
+        function resetResultTable() {
+            let table = document.getElementById("reportTable");
+            table.innerHTML = "";
+
+            document.getElementById("resultHead").hidden = true;
+            document.getElementById("taskName").innerHTML = "";
+        }
 
         function updateResultTable(table, totalRecords) {
             let taskLinesBooty = document.getElementById('taskLinesBooty').value;
-            let sortMethod = document.getElementById('sortSelect').value;
+            let sortMethod = document.getElementById('sortSelect').value;           
 
-            let groupedData = typistDateFiltered.reduce((previous, current) => {
+            let groupedData = typistCompletions.reduce((previous, current) => {
+                if (current.date < reportDateStart || current.date > reportDateEnd) {
+                    return previous;
+                }
 
                 if (previous.hasOwnProperty(current.name)) {
 
@@ -103,10 +116,10 @@
                 headerTitle7 = headerRow.insertCell(6);
             }
 
-            if (typistDateFiltered.length != 0) {
+            if (typistCompletions.length != 0) {
 
                 document.getElementById("taskName").innerHTML = "<h2><a href='https://writeforme.org/task/" + taskIdData + "' target='_blank'>" + taskNameData + "</a></h2>";
-                document.getElementById("taskName").hidden = false;
+                document.getElementById("resultHead").hidden = false;
 
                 headerTitle1.innerHTML = "<b>WFM USER ID</b>";
                 headerTitle2.innerHTML = "<b>USER</b>";
@@ -177,7 +190,7 @@
 
             });
 
-            if (typistDateFiltered.length != 0) {
+            if (typistCompletions.length != 0) {
 
                 row = table.insertRow();
 
@@ -234,12 +247,11 @@
             } else {
 
                 button.disabled = true;
-                checkbox.disabled = true;
 
                 let table = document.getElementById("reportTable");
                 table.innerHTML = "";
 
-                document.getElementById("taskName").hidden = true;
+                document.getElementById("resultHead").hidden = true;
                 document.getElementById("taskName").innerHTML = "";
 
                 loader.hidden = false;
@@ -263,21 +275,12 @@
 
                 let wfmResponseOk = true;
 
-                typistDateFiltered.length = 0;
+                typistCompletions.length = 0;
 
-                let reportDateStart = new Date(inputDateStart);
-                let reportDateEnd = new Date(inputDateEnd);
-
-                // New York Time timezone adjustment + 3HRS Heaven
-
-                reportDateStart.setHours(reportDateStart.getHours() + (isDST ? 6 : 7));         // Adds 6 or 7 hrs
-                reportDateStart.setMinutes(reportDateStart.getMinutes() + 59);                  // Adds 59 minutes
-                reportDateStart.setSeconds(reportDateStart.getSeconds() + 59);                  // Adds 59 seconds
-
-                // One day range with New York Time timezone adjustment + 3HRS Heaven
-
-                reportDateEnd.setDate(reportDateEnd.getDate() + 1);                             // Adds 1 day
-                reportDateEnd.setHours(reportDateEnd.getHours() + (isDST ? 7 : 8));             // Adds 7 or 8 hrs
+                reportDateStart = DateTime.fromISO(inputDateStart)
+                    .setZone("America/Los_Angeles", { keepLocalTime: true }).startOf('day');
+                reportDateEnd = DateTime.fromISO(inputDateEnd)
+                    .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
 
                 function retrieveDataWFM() {
 
@@ -309,27 +312,29 @@
                                 taskIdData = data.solutions[0].task._id;
                                 taskNameData = data.solutions[0].task.name;
 
+                                const retrieveTime = new Date();
+
                                 for (let index = 0; index < data.solutions.length; index++) {
 
                                     const element = data.solutions[index];
 
-                                    let userDate = new Date(element.created);
-
-                                    if (userDate.getTime() > reportDateStart.getTime() && userDate.getTime() < reportDateEnd.getTime()) {
-                                        recordFound = true;
-                                        typistDateFiltered.push(
+                                    //let userDate = new Date(element.created);
+                                    let userDate = DateTime.fromISO(element.created);
+                                    typistCompletions.push(
                                             {
                                                 name: element.userName,
                                                 userId: element.realUser != null ? element.realUser._id : "DELETED USER",
                                                 photo: element.realUser != null ? element.realUser.lowPhoto : undefined,
                                                 time: element.totalTime,
                                                 mistakes: element.mistakes,
-                                                date: element.created
+                                                date: userDate,
+                                                retrieved: retrieveTime,
+                                                rank: index+skipSetting,
+                                                among: totalRecords
                                             }
                                         );
-                                    } else if (recordFound) {
+                                    if (userDate < reportDateStart) {
                                         continueApiRequests = false;
-                                        break;
                                     }
                                 }
 
@@ -371,8 +376,21 @@
 
                 loaderText.innerHTML = "Done.";
                 loaderText.hidden = true;
+
+                let startTime = document.getElementById('startTime');
+                let endTime = document.getElementById('endTime');                
+                const startTimeValue = reportDateStart.setZone(tzid);
+                startTime.innerHTML = startTimeValue.toLocaleString(DateTime.DATETIME_MED);
+                const pacificTime = DateTime.fromISO(datePickerEnd.value)
+                   .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
+                const endTimeValue = reportDateEnd.setZone(tzid);
+                endTime.innerHTML = endTimeValue.toLocaleString(DateTime.DATETIME_MED);
+
+                let computationTime = document.getElementById('computationTime');
+
+                let localTime = DateTime.now();
+                computationTime.innerHTML = "Computation time: " + localTime.toLocaleString(DateTime.DATETIME_MED);
                 button.disabled = false;
-                checkbox.disabled = false;
                 loader.hidden = true;
 
             }
@@ -382,21 +400,18 @@
         
         $(document).ready(function () {
 
-            checkbox = document.getElementById('dstCheck');
-            isDST = checkbox.checked;
+            //let datePickerStart = document.getElementById('datePickerStart');
+            //let datePickerEnd = document.getElementById('datePickerEnd');
 
-            let nytCurrentTime = document.getElementById('nytCurrentTime');
+            //let onStartChange = function () {
+            //};
+            //let onEndChange = function() {
+            //};
+            //if (datePickerStart.value.length != 0) {onStartChange();} 
+            //if (datePickerEnd.value.length != 0) {onEndChange();}
 
-            let newYorkTime = new Date();
-            newYorkTime.setHours(newYorkTime.getHours() - 5);               // New York Standard Time
-            nytCurrentTime.innerHTML = "<b>" + newYorkTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: "UTC" }) + "</b>";
-
-            checkbox.addEventListener('change', function () {
-                isDST = checkbox.checked;
-                newYorkTime = new Date();
-                newYorkTime.setHours(newYorkTime.getHours() - (isDST ? 4 : 5));
-                nytCurrentTime.innerHTML = "<b>" + newYorkTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: "UTC" }) + "</b>";
-            });
+            //datePickerStart.addEventListener('change', onStartChange);
+            //datePickerEnd.addEventListener('change', onEndChange);
 
             let sortSelect = document.getElementById('sortSelect');
             sortSelect.addEventListener('change', function(){
@@ -410,24 +425,11 @@
 
 <body>
 
-    <h1>Task Counter</h1>
-    <b>Mistress Erica</b> Edition<br>
-    Ver. 3.1.2<br><br>
-
     <section>
+        <h1>Task Counter</h1>
+        <b>Mistress Erica</b> Edition<br>
+        Ver. 3.1.2<br>
         <ul>
-            <li>
-                <h3>New York Time</h3>
-                <p id="nytCurrentTime">
-                    -- : --
-                </p>
-            </li>
-            <li>
-                <label for="dstCheck">DST</label>
-                <p>
-                    <input type="checkbox" id="dstCheck" />
-                </p>
-            </li>
             <li>
                 <h3>Starting Day</h3>
                 <p>
@@ -465,16 +467,19 @@
         </ul>
     </section>
     <br>
-    <section id="taskName" hidden>
+    <section id="resultHead" hidden>
+        <div class="center" id="taskName"></div>
+        <div class="center">From <span id="startTime">...</span> to <span id="endTime">...</span></div>
+        <div class="center" id="computationTime"></div>
     </section>
     <br>
     <table class="center" id="reportTable">
     </table>
     <br>
-    <center>
+    <div class="center">
         <div id="loaderText" class="loaderText" hidden></div>
         <div id="loader" class="loader" hidden></div>
-    </center>
+    </div>
     <br>
     <br>
     <br>
