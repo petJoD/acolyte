@@ -21,6 +21,7 @@
         let totalRecords = 0;
         let reportDateStart;
         let reportDateEnd;
+        let scanDone = false;
 
         function resetResultTable() {
             let table = document.getElementById("reportTable");
@@ -31,6 +32,9 @@
         }
 
         function updateResultTable(table, totalRecords) {
+            if (! scanDone) {
+                return;
+            }
             let taskLinesBooty = document.getElementById('taskLinesBooty').value;
             let sortMethod = document.getElementById('sortSelect').value;           
 
@@ -369,6 +373,7 @@
                 }
 
                 loaderText.innerHTML = "Building result table now.";
+                scanDone = true;
 
                 if (wfmResponseOk) {
                     updateResultTable(table, totalRecords);
@@ -400,25 +405,42 @@
         
         $(document).ready(function () {
 
-            //let datePickerStart = document.getElementById('datePickerStart');
-            //let datePickerEnd = document.getElementById('datePickerEnd');
-
-            //let onStartChange = function () {
-            //};
-            //let onEndChange = function() {
-            //};
-            //if (datePickerStart.value.length != 0) {onStartChange();} 
-            //if (datePickerEnd.value.length != 0) {onEndChange();}
-
-            //datePickerStart.addEventListener('change', onStartChange);
-            //datePickerEnd.addEventListener('change', onEndChange);
-
+            let datePickerStart = document.getElementById('datePickerStart');
+            let datePickerEnd = document.getElementById('datePickerEnd');
+            let taskIdField = document.getElementById('taskId');
+            let taskLinesBooty = document.getElementById('taskLinesBooty');
             let sortSelect = document.getElementById('sortSelect');
-            sortSelect.addEventListener('change', function(){
+
+            let onStartChange = function () {
+                scanDone = false;
+                resetResultTable();
+            };
+            let onEndChange = function() {
+                scanDone = false;
+                resetResultTable();
+            };
+            let onTaskChange = function() {
+                scanDone = false;
+                resetResultTable();
+            }
+            let onLinesChange = function(){
                 let table = document.getElementById("reportTable");
                 table.innerHTML = "";
                 updateResultTable(table, totalRecords);
-            });
+            }
+            let onSortChange = function(){
+                let table = document.getElementById("reportTable");
+                table.innerHTML = "";
+                updateResultTable(table, totalRecords);
+            }
+            //if (datePickerStart.value.length != 0) {onStartChange();} 
+            //if (datePickerEnd.value.length != 0) {onEndChange();}
+
+            datePickerStart.addEventListener('change', onStartChange);
+            datePickerEnd.addEventListener('change', onEndChange);
+            taskIdField.addEventListener('change', onTaskChange);
+            taskLinesBooty.addEventListener('change', onLinesChange)
+            sortSelect.addEventListener('change', onSortChange);
         });
     </script>
 </head>
@@ -449,13 +471,13 @@
                 </p>
             </li>
             <li>
-                <h3>Lines/Booty</h3>
-                <p>
-                    <input type="number" id="taskLinesBooty" size="10" min="0" value="0" />
-                </p>
+                <button id="submitButton" onclick="createReport()" :hover>Submit</button>
             </li>
             <li>
-                <button id="submitButton" onclick="createReport()" :hover>Submit</button>
+                <h3>Lines/Booty</h3>
+                <p>
+                    <input type="number" id="taskLinesBooty" size="10" min="0" value="25" />
+                </p>
             </li>
             <li>
                 <label for="sortSelect">Sort by</label>
