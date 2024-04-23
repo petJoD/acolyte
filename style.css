@@ -21,7 +21,7 @@ h1 {
     font-family: "Roboto Condensed", sans-serif;
     font-size: 35px;
     text-align: left;
-    margin-top: 25px;
+    margin-top: 15px;
     margin-bottom: 0px;
 }
 
@@ -30,12 +30,14 @@ h2 {
     font-family: "Roboto Condensed", sans-serif;
     text-align: center;
     font-size: 30px;
+    margin-top: 15px;
 }
 
 h3 {
     color: rgb(150, 150, 150);
     font-family: "Roboto Condensed", sans-serif;
     text-align: center;
+    font-size: 19px;
 }
 
 table {
@@ -154,8 +156,9 @@ label {
     color: rgb(150, 150, 150);
     font-family: "Roboto Condensed", sans-serif;
     text-align: center;
-    font-size: 18px;
+    font-size: 19px;
     display: block;
+    font-weight: bold;
 }
 
 input {

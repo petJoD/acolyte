@@ -84,6 +84,8 @@
                     return Intl.Collator().compare(a,b);
                 });
             }
+            document.getElementById("seenRecords").innerHTML = new Intl.NumberFormat().format(typistCompletions.length) ;
+            document.getElementById("totalRecords").innerHTML = new Intl.NumberFormat().format(totalRecords) ;
 
             let totalTaskCount = 0;
             let totalTimeCount = 0;
@@ -187,39 +189,32 @@
 
             });
 
-            if (typistCompletions.length != 0) {
+            row = tfoot.insertRow();
 
-                row = tfoot.insertRow();
-
-                document.getElementById("seenRecords").innerHTML = new Intl.NumberFormat().format(typistCompletions.length) ;
-                document.getElementById("totalRecords").innerHTML = new Intl.NumberFormat().format(totalRecords) ;
-                let tdf1_2 = row.insertCell(0);
-                tdf1_2.colSpan = 2;
-                let tdf3 = row.insertCell(1);
-                let tdf4 = row.insertCell(2);
-                let tdf5 = row.insertCell(3);
-                let tdf6 ;
-                if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                    tdf6 = row.insertCell(4);
-                }
-
-                tdf1_2.innerHTML = "TOTALS:";
-                tdf3.innerHTML =  new Intl.NumberFormat().format(totalTaskCount) ;
-                tdf4.innerHTML =  new Intl.NumberFormat().format(totalMistakeCount) ;
-                tdf5.innerHTML = convertMsToTime(totalTimeCount) ;
-                if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                    tdf6.innerHTML = new Intl.NumberFormat().format(totalTaskCount * taskLinesBooty) ;
-                }
-
-                tdf1_2.style = "color: white; font-size: 15px; font-weight: bold; "
-                tdf3.style = "color: white; font-size: 25px; font-weight: 500; "
-
-                if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                    tdf6.style = "color: white; font-size: 25px; font-weight: 500; "
-                }
-
+            let tdf1_2 = row.insertCell(0);
+            tdf1_2.colSpan = 2;
+            let tdf3 = row.insertCell(1);
+            let tdf4 = row.insertCell(2);
+            let tdf5 = row.insertCell(3);
+            let tdf6 ;
+            if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                tdf6 = row.insertCell(4);
             }
 
+            tdf1_2.innerHTML = "TOTALS:";
+            tdf3.innerHTML =  new Intl.NumberFormat().format(totalTaskCount) ;
+            tdf4.innerHTML =  new Intl.NumberFormat().format(totalMistakeCount) ;
+            tdf5.innerHTML = convertMsToTime(totalTimeCount) ;
+            if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                tdf6.innerHTML = new Intl.NumberFormat().format(totalTaskCount * taskLinesBooty) ;
+            }
+
+            tdf1_2.style = "color: white; font-size: 15px; font-weight: bold; "
+            tdf3.style = "color: white; font-size: 25px; font-weight: 500; "
+
+            if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                tdf6.style = "color: white; font-size: 25px; font-weight: 500; "
+            }
         }
 
         async function createReport() {
@@ -302,9 +297,13 @@
                                     totalRecords = data.totalCount;
                                 }
 
-                                taskIdData = data.solutions[0].task._id;
-                                taskNameData = data.solutions[0].task.name;
-
+                                if (data.solutions.length > 0) {
+                                    taskIdData = data.solutions[0].task._id;
+                                    taskNameData = data.solutions[0].task.name;
+                                }
+                                else {
+                                    continueApiRequests = false;
+                                }
                                 const retrieveTime = new Date();
 
                                 for (let index = 0; index < data.solutions.length; index++) {
@@ -439,34 +438,26 @@
     <section>
         <h1>Task Counter</h1>
         <b>Mistress Erica</b> Edition<br>
-        Ver. 3.1.2<br>
+        Ver. 3.1.5
         <ul>
             <li>
-                <h3>Starting Day</h3>
-                <p>
-                    <input type="date" id="datePickerStart" />
-                </p>
+                <label for="datePickerStart">Starting Day</label>
+                <input type="date" id="datePickerStart" />
             </li>
             <li>
-                <h3>Ending Day</h3>
-                <p>
-                    <input type="date" id="datePickerEnd" />
-                </p>
+                <label for="datePickerEnd">Ending Day</label>
+                <input type="date" id="datePickerEnd" />
             </li>
             <li>
-                <h3>WFM Task ID</h3>
-                <p>
-                    <input type="text" id="taskId" size="30" />
-                </p>
+                <label for="taskId">WFM Task ID</label>
+                <input type="text" id="taskId" size="30" />
             </li>
             <li>
                 <button id="submitButton" onclick="createReport()" :hover>Submit</button>
             </li>
             <li>
-                <h3>Lines/Booty</h3>
-                <p>
-                    <input type="number" id="taskLinesBooty" size="10" min="0" value="25" />
-                </p>
+                <label for="taskLinesBooty">Lines/Booty</label>
+                <input type="number" id="taskLinesBooty" size="10" min="0" value="25" />
             </li>
             <li>
                 <label for="sortSelect">Sort by</label>
@@ -496,7 +487,7 @@
     <br>
     <br>
     <section>
-        <h3>Heaven's Slavery System © 2023</h3>
+        <h3>Heaven's Slavery System © 2023-2024</h3>
     </section>
 
 </body>
