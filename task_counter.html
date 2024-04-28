@@ -399,12 +399,42 @@
             let taskLinesBooty = document.getElementById('taskLinesBooty');
             let sortSelect = document.getElementById('sortSelect');
 
+            const urlParams = new URLSearchParams(window.location.search);
+            const startArg = urlParams.get('start');
+            const endArg = urlParams.get('end');
+            const taskId = urlParams.get('task');
+
+            let localTime = DateTime.now();
+            let argStartTime = DateTime.fromISO(startArg);
+            let argEndTime = DateTime.fromISO(endArg);
+            if (argStartTime.isValid) {
+                datePickerStart.value = argStartTime.toISODate();
+            }
+            else {
+                datePickerStart.value = localTime.toISODate();
+            }
+            if (argEndTime.isValid) {
+                datePickerEnd.value = argEndTime.toISODate();
+            }
+            else {
+                datePickerEnd.value = localTime.toISODate();
+            }       
             let onStartChange = function () {
                 scanDone = false;
+                let dateStart = DateTime.fromISO(datePickerStart.value);
+                let dateEnd = DateTime.fromISO(datePickerEnd.value);
+                if (dateEnd < dateStart) {
+                    datePickerEnd.value = datePickerStart.value;
+                }
                 resetResultTable();
             };
             let onEndChange = function() {
                 scanDone = false;
+                let dateStart = DateTime.fromISO(datePickerStart.value);
+                let dateEnd = DateTime.fromISO(datePickerEnd.value);
+                if (dateEnd < dateStart) {
+                    datePickerStart.value = datePickerEnd.value;
+                }
                 resetResultTable();
             };
             let onTaskChange = function() {
