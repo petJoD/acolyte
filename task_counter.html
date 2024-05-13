@@ -23,6 +23,28 @@
         let reportDateEnd;
         let scanDone = false;
 
+        function retrieveDataWFM(dataHandler, argsBuilder, urlAJAX) {
+
+            return new Promise(function (resolve, reject) {
+
+                $.ajax({
+                    type: "POST",
+                    url: urlAJAX,
+                    contentType: "application/json",
+                    data: JSON.stringify(argsBuilder()),
+                    success: function (data) {
+                        dataHandler(data, resolve);
+                    },
+                    error: function (request, status, error) {
+                        alert("WFM Response Error:\n" + request.responseText);
+                        reject();
+                    }
+                });
+
+            });
+
+        }
+
         function resetResultTable() {
             let table = document.getElementById("reportTable");
             table.innerHTML = "";
@@ -246,7 +268,7 @@
                 loaderText.innerHTML = "Retrieving tasks from <b>WFM</b>...";
                 loaderText.hidden = false;
 
-                let urlAJAX = "https://api.writeforme.org/api/v1/getSolutions";
+                let getSolAPI = "https://api.writeforme.org/api/v1/getSolutions";
                 let limitSetting = 25;
                 let listTypeSetting = "taskSolutions";
                 let querySetting = "";
@@ -261,8 +283,6 @@
 
                 let recordFound = false;
 
-                let wfmResponseOk = true;
-
                 typistCompletions.length = 0;
 
                 reportDateStart = DateTime.fromISO(inputDateStart)
@@ -270,86 +290,71 @@
                 reportDateEnd = DateTime.fromISO(inputDateEnd)
                     .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
 
-                function retrieveDataWFM() {
+                let dataCapture = function(data, resolve) {
+                    loaderText.innerHTML = "Received " + data.solutions.length + " tasks, handling them...";
+                    if (totalRecords == 0) {
+                        totalRecords = data.totalCount;
+                    }
+                    else if (totalRecords != data.totalCount) {
+                        alert("Record number changed since data retrieval start. Restart to avoid false results.");
+                        totalRecords = data.totalCount;
+                    }
 
-                    return new Promise(function (resolve, reject) {
+                    if (data.solutions.length > 0) {
+                        taskIdData = data.solutions[0].task._id;
+                        taskNameData = data.solutions[0].task.name;
+                    }
+                    else {
+                        continueApiRequests = false;
+                    }
+                    const retrieveTime = new Date();
 
-                        $.ajax({
-                            type: "POST",
-                            url: urlAJAX,
-                            contentType: "application/json",
-                            data: JSON.stringify({
-                                limit: limitSetting,
-                                listType: listTypeSetting,
-                                query: querySetting,
-                                skip: skipSetting,
-                                sortAsc: sortAscSetting,
-                                sortBy: sortBySetting,
-                                task: taskSetting
-                            }),
-                            success: function (data) {
-                                loaderText.innerHTML = "Received " + data.solutions.length + " tasks, handling them...";
-                                if (totalRecords == 0) {
-                                    totalRecords = data.totalCount;
+                    for (let index = 0; index < data.solutions.length; index++) {
+
+                        const element = data.solutions[index];
+
+                        //let userDate = new Date(element.created);
+                        let userDate = DateTime.fromISO(element.created);
+                        typistCompletions.push(
+                                {
+                                    name: element.userName,
+                                    userId: element.realUser != null ? element.realUser._id : "DELETED USER",
+                                    photo: element.realUser != null ? element.realUser.lowPhoto : undefined,
+                                    time: element.totalTime,
+                                    mistakes: element.mistakes,
+                                    date: userDate,
+                                    retrieved: retrieveTime,
+                                    rank: index+skipSetting,
+                                    among: totalRecords
                                 }
-                                else if (totalRecords != data.totalCount) {
-                                    alert("Record number changed since data retrieval start. Restart to avoid false results.");
-                                    totalRecords = data.totalCount;
-                                }
+                            );
+                        if (userDate < reportDateStart) {
+                            continueApiRequests = false;
+                        }
+                    }
 
-                                if (data.solutions.length > 0) {
-                                    taskIdData = data.solutions[0].task._id;
-                                    taskNameData = data.solutions[0].task.name;
-                                }
-                                else {
-                                    continueApiRequests = false;
-                                }
-                                const retrieveTime = new Date();
+                    records += limitSetting;
+                    skipSetting += 25;
 
-                                for (let index = 0; index < data.solutions.length; index++) {
+                    if (continueApiRequests) {
+                        loaderText.innerHTML = "Waiting 3s before asking again (seen " + records + " tasks so far)...";
+                        setTimeout(resolve, 3000);                                          // 3 second cooldown before a new request to WFM is sent
+                    } else {
+                        resolve();
+                    }
 
-                                    const element = data.solutions[index];
+                }
 
-                                    //let userDate = new Date(element.created);
-                                    let userDate = DateTime.fromISO(element.created);
-                                    typistCompletions.push(
-                                            {
-                                                name: element.userName,
-                                                userId: element.realUser != null ? element.realUser._id : "DELETED USER",
-                                                photo: element.realUser != null ? element.realUser.lowPhoto : undefined,
-                                                time: element.totalTime,
-                                                mistakes: element.mistakes,
-                                                date: userDate,
-                                                retrieved: retrieveTime,
-                                                rank: index+skipSetting,
-                                                among: totalRecords
-                                            }
-                                        );
-                                    if (userDate < reportDateStart) {
-                                        continueApiRequests = false;
-                                    }
-                                }
-
-                                records += limitSetting;
-                                skipSetting += 25;
-
-                                if (continueApiRequests) {
-                                    loaderText.innerHTML = "Waiting 3s before asking again (seen " + records + " tasks so far)...";
-                                    setTimeout(resolve, 3000);                                          // 3 second cooldown before a new request to WFM is sent
-                                } else {
-                                    resolve();
-                                }
-
-                            },
-                            error: function (request, status, error) {
-                                wfmResponseOk = false;
-                                alert("WFM Response Error:\n" + request.responseText);
-                                reject();
-                            }
-                        });
-
-                    });
-
+                let buildArgs = function() {
+                    return {
+                        limit: limitSetting,
+                        listType: listTypeSetting,
+                        query: querySetting,
+                        skip: skipSetting,
+                        sortAsc: sortAscSetting,
+                        sortBy: sortBySetting,
+                        task: taskSetting
+                    };
                 }
 
                 let noWfmError = true;
@@ -357,13 +362,13 @@
                 let continueApiRequests = true;
 
                 while (records <= totalRecords && continueApiRequests && noWfmError) {
-                    await retrieveDataWFM().catch(() => noWfmError = false);
+                    await retrieveDataWFM(dataCapture, buildArgs, getSolAPI).catch(() => noWfmError = false);
                 }
 
                 loaderText.innerHTML = "Building result table now.";
                 scanDone = true;
 
-                if (wfmResponseOk) {
+                if (noWfmError) {
                     updateResultTable(table, totalRecords);
                 }
 
@@ -390,7 +395,9 @@
 
         }
 
-        
+        async function tryFastUpdate() {
+
+        }
         $(document).ready(function () {
 
             let datePickerStart = document.getElementById('datePickerStart');
@@ -493,6 +500,9 @@
                     <option value="tally" selected>Last completion time (most recent first)</option>
                     <option value="name">WFM name (A to Z), acolytes first</option>
                 </select>
+            </li>
+            <li>
+                <div id="experimental" hidden><button id="tryFastUpdateBtn" onclick="tryFastUpdate" >try fast update</button></div>
             </li>
         </ul>
     </section>
