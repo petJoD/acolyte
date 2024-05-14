@@ -39,6 +39,8 @@
 
             document.getElementById("resultHead").hidden = true;
             document.getElementById("taskName").innerHTML = "";
+
+            document.getElementById("experimental").hidden = true;
         }
 
         function updateResultTable(table, totalRecords) {
@@ -481,8 +483,6 @@
                 loaderText.innerHTML = "Done.";
                 loaderText.hidden = true;
 
-                updateStartEndTime();
-
                 let computationTime = document.getElementById('computationTime');
 
                 let localTime = DateTime.now();
@@ -568,7 +568,7 @@
     <section>
         <h1>Task Counter</h1>
         <b>Mistress Erica</b> Edition<br>
-        Ver. 3.1.6
+        Ver. 3.1.7
         <ul>
             <li>
                 <label for="datePickerStart">Starting Day</label>
