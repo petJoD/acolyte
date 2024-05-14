@@ -10,6 +10,7 @@
     <script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.7.0.js"></script>
     <script type="text/javascript" language="javascript" src=" https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js "></script>
     <script type="text/javascript" language="javascript" src="scripts/avatar.js"></script>
+    <script type="text/javascript" language="javascript" src="scripts/wfm_scan.js"></script>
 
     <script type="text/javascript">
         let DateTime = luxon.DateTime;
@@ -23,26 +24,13 @@
         let reportDateEnd;
         let scanDone = false;
 
-        function retrieveDataWFM(dataHandler, argsBuilder, urlAJAX) {
-
-            return new Promise(function (resolve, reject) {
-
-                $.ajax({
-                    type: "POST",
-                    url: urlAJAX,
-                    contentType: "application/json",
-                    data: JSON.stringify(argsBuilder()),
-                    success: function (data) {
-                        dataHandler(data, resolve);
-                    },
-                    error: function (request, status, error) {
-                        alert("WFM Response Error:\n" + request.responseText);
-                        reject();
-                    }
-                });
-
-            });
-
+        function updateStartEndTime() {
+            let startTime = document.getElementById('startTime');
+            let endTime = document.getElementById('endTime');                
+            const startTimeValue = reportDateStart.setZone(tzid);
+            startTime.innerHTML = startTimeValue.toLocaleString(DateTime.DATETIME_MED);
+            const endTimeValue = reportDateEnd.setZone(tzid);
+            endTime.innerHTML = endTimeValue.toLocaleString(DateTime.DATETIME_MED);
         }
 
         function resetResultTable() {
@@ -61,7 +49,7 @@
             let sortMethod = document.getElementById('sortSelect').value;           
 
             let groupedData = typistCompletions.reduce((previous, current) => {
-                if (current.date < reportDateStart || current.date > reportDateEnd) {
+                if (DateTime.fromISO(current.date) < reportDateStart || DateTime.fromISO(current.date) > reportDateEnd) {
                     return previous;
                 }
 
@@ -70,10 +58,10 @@
                     previous[current.name].count++;
                     previous[current.name].time = previous[current.name].time + current.time;
                     previous[current.name].mistakes = previous[current.name].mistakes + current.mistakes;
-                    if (previous[current.name].last < current.date) {
+                    if (DateTime.fromISO(previous[current.name].last) < DateTime.fromISO(current.date)) {
                         previous[current.name].last = current.date;
                     }
-                    if (previous[current.name].first > current.date) {
+                    if (DateTime.fromISO(previous[current.name].first) > DateTime.fromISO(current.date)) {
                         previous[current.name].first = current.date;
                     }
 
@@ -249,6 +237,7 @@
             let button = document.getElementById('submitButton');
             let loader = document.getElementById("loader");
             let loaderText = document.getElementById("loaderText");
+            let button2 = document.getElementById("tryFastUpdateBtn");
 
             if (taskID.length == 0) {
                 alert("Please provide a Task ID to create the report.");
@@ -257,6 +246,7 @@
             } else {
 
                 button.disabled = true;
+                button2.disabled = true;
 
                 let table = document.getElementById("reportTable");
                 table.innerHTML = "";
@@ -268,22 +258,24 @@
                 loaderText.innerHTML = "Retrieving tasks from <b>WFM</b>...";
                 loaderText.hidden = false;
 
-                let getSolAPI = "https://api.writeforme.org/api/v1/getSolutions";
-                let limitSetting = 25;
-                let listTypeSetting = "taskSolutions";
-                let querySetting = "";
-                let skipSetting = 0;
-                let sortAscSetting = false;
-                let sortBySetting = "created";
-                let taskSetting = taskID;
+                let setting = {
+                    limit: 25,
+                    listType: "taskSolutions",
+                    query: "",
+                    skip: 0,
+                    sortAsc: false,
+                    sortBy: "created",
+                    task: taskID
+                };
 
                 let records = 0;
                 
                 totalRecords = 0;
 
-                let recordFound = false;
-
                 typistCompletions.length = 0;
+
+                let noWfmError = true;
+                let continueApiRequests = true;
 
                 reportDateStart = DateTime.fromISO(inputDateStart)
                     .setZone("America/Los_Angeles", { keepLocalTime: true }).startOf('day');
@@ -307,7 +299,7 @@
                     else {
                         continueApiRequests = false;
                     }
-                    const retrieveTime = new Date();
+                    const retrieveTime = DateTime.now();
 
                     for (let index = 0; index < data.solutions.length; index++) {
 
@@ -322,9 +314,9 @@
                                     photo: element.realUser != null ? element.realUser.lowPhoto : undefined,
                                     time: element.totalTime,
                                     mistakes: element.mistakes,
-                                    date: userDate,
-                                    retrieved: retrieveTime,
-                                    rank: index+skipSetting,
+                                    date: element.created,
+                                    retrieved: retrieveTime.toISO(),
+                                    rank: index+setting.skip,
                                     among: totalRecords
                                 }
                             );
@@ -333,8 +325,8 @@
                         }
                     }
 
-                    records += limitSetting;
-                    skipSetting += 25;
+                    records += setting.limit;
+                    setting.skip += setting.limit;
 
                     if (continueApiRequests) {
                         loaderText.innerHTML = "Waiting 3s before asking again (seen " + records + " tasks so far)...";
@@ -345,24 +337,8 @@
 
                 }
 
-                let buildArgs = function() {
-                    return {
-                        limit: limitSetting,
-                        listType: listTypeSetting,
-                        query: querySetting,
-                        skip: skipSetting,
-                        sortAsc: sortAscSetting,
-                        sortBy: sortBySetting,
-                        task: taskSetting
-                    };
-                }
-
-                let noWfmError = true;
-
-                let continueApiRequests = true;
-
                 while (records <= totalRecords && continueApiRequests && noWfmError) {
-                    await retrieveDataWFM(dataCapture, buildArgs, getSolAPI).catch(() => noWfmError = false);
+                    await acolyte.wfm_scan.getSolutions(dataCapture, setting).catch(() => noWfmError = false);
                 }
 
                 loaderText.innerHTML = "Building result table now.";
@@ -375,20 +351,17 @@
                 loaderText.innerHTML = "Done.";
                 loaderText.hidden = true;
 
-                let startTime = document.getElementById('startTime');
-                let endTime = document.getElementById('endTime');                
-                const startTimeValue = reportDateStart.setZone(tzid);
-                startTime.innerHTML = startTimeValue.toLocaleString(DateTime.DATETIME_MED);
-                const pacificTime = DateTime.fromISO(datePickerEnd.value)
-                   .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
-                const endTimeValue = reportDateEnd.setZone(tzid);
-                endTime.innerHTML = endTimeValue.toLocaleString(DateTime.DATETIME_MED);
+                updateStartEndTime();
 
                 let computationTime = document.getElementById('computationTime');
 
                 let localTime = DateTime.now();
+                if (localTime < reportDateEnd) {
+                    document.getElementById("experimental").hidden = false;
+                }
                 computationTime.innerHTML = "Computation time: " + localTime.toLocaleString(DateTime.DATETIME_MED);
                 button.disabled = false;
+                button2.disabled = false;
                 loader.hidden = true;
 
             }
@@ -396,7 +369,129 @@
         }
 
         async function tryFastUpdate() {
+            if ((!scanDone)|| (typistCompletions.length == 0)) {
+                alert("button used when scanDone is false");
+            }
+            else {
+                let lastSeenCompletionTime = typistCompletions[0].date;
 
+                let taskID = document.getElementById('taskId').value;
+
+                let button = document.getElementById('submitButton');
+                let loader = document.getElementById("loader");
+                let loaderText = document.getElementById("loaderText");
+                let button2 = document.getElementById("tryFastUpdateBtn");
+
+                button.disabled = true;
+                button2.disabled = true;
+                let table = document.getElementById("reportTable");
+                table.innerHTML = "";
+
+                loader.hidden = false;
+                loaderText.innerHTML = "Retrieving tasks from <b>WFM</b>...";
+                loaderText.hidden = false;
+
+                let setting = {
+                    limit: 5,
+                    listType: "taskSolutions",
+                    query: "",
+                    skip: 0,
+                    sortAsc: false,
+                    sortBy: "created",
+                    task: taskID
+                };
+
+                let records = 0;
+
+                let noWfmError = true;
+                let continueApiRequests = true;
+
+                let dataMerge = function(data, resolve) {
+                    loaderText.innerHTML = "Received " + data.solutions.length + " tasks, handling them...";
+
+                    let delta = data.totalCount - totalRecords;
+                    //totalRecords = data.totalCount;
+                    const retrieveTime = DateTime.now();
+                    if (delta < 0) {
+                        alert("less completions found, unable to do a fast merge, use the submit button");
+                        continueApiRequests = false;
+                    }
+                    else {
+                        // goal: insert delta elements in typistCompletions and check the next ones are the expected one, update their retrieved infos
+                        for (let index = 0; index < data.solutions.length; index++) {
+                            const element = data.solutions[index];
+                            if (index < delta) {
+                                let userDate = DateTime.fromISO(element.created);
+                                typistCompletions.splice(index+setting.skip, 0,
+                                    {
+                                        name: element.userName,
+                                        userId: element.realUser != null ? element.realUser._id : "DELETED USER",
+                                        photo: element.realUser != null ? element.realUser.lowPhoto : undefined,
+                                        time: element.totalTime,
+                                        mistakes: element.mistakes,
+                                        date: element.created,
+                                        retrieved: retrieveTime.toISO(),
+                                        rank: index+setting.skip,
+                                        among: data.totalCount
+                                    }
+                                );
+                                ++totalRecords;
+                            }
+                            else {
+                                let stored = typistCompletions[index+setting.skip];
+                                if ((element.created === stored.date)
+                                    && (element.userName === stored.name)) {
+                                    stored.retrieved =  retrieveTime.toISO();
+                                    stored.rank = index+setting.skip;
+                                    stored.among = data.totalCount;
+                                }
+                                else {
+                                    alert("different task completion detected when it shouldn't, use submit to reset data");
+                                    continueApiRequests = false;
+                                    break;
+                                }
+                                continueApiRequests = false;
+                            }
+                        }
+
+                        records += data.solutions.length;
+                        setting.skip = records;                  
+                    }
+
+                    if (continueApiRequests) {
+                        loaderText.innerHTML = "Waiting 1s before asking again (seen " + records + " tasks so far)...";
+                        setTimeout(resolve, 1000);                                          // 3 second cooldown before a new request to WFM is sent
+                    } else {
+                        resolve();
+                    }
+
+                }
+
+                while (records <= totalRecords && continueApiRequests && noWfmError) {
+                    await acolyte.wfm_scan.getSolutions(dataMerge, setting).catch(() => noWfmError = false);
+                }
+
+                loaderText.innerHTML = "Building result table now.";
+                scanDone = true;
+
+                if (noWfmError) {
+                    updateResultTable(table, totalRecords);
+                }
+
+                loaderText.innerHTML = "Done.";
+                loaderText.hidden = true;
+
+                updateStartEndTime();
+
+                let computationTime = document.getElementById('computationTime');
+
+                let localTime = DateTime.now();
+                computationTime.innerHTML = "Computation time: " + localTime.toLocaleString(DateTime.DATETIME_MED);
+                button.disabled = false;
+                button2.disabled = false;
+                loader.hidden = true;
+                
+            }
         }
         $(document).ready(function () {
 
@@ -502,7 +597,7 @@
                 </select>
             </li>
             <li>
-                <div id="experimental" hidden><button id="tryFastUpdateBtn" onclick="tryFastUpdate" >try fast update</button></div>
+                <div id="experimental"><button id="tryFastUpdateBtn" onclick="tryFastUpdate()" >try fast update</button></div>
             </li>
         </ul>
     </section>
