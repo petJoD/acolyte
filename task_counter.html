@@ -40,7 +40,7 @@
             document.getElementById("resultHead").hidden = true;
             document.getElementById("taskName").innerHTML = "";
 
-            document.getElementById("experimental").hidden = true;
+            document.getElementById("fastUpdate").hidden = true;
         }
 
         function updateResultTable(table, totalRecords) {
@@ -359,7 +359,7 @@
 
                 let localTime = DateTime.now();
                 if (localTime < reportDateEnd) {
-                    document.getElementById("experimental").hidden = false;
+                    document.getElementById("fastUpdate").hidden = false;
                 }
                 computationTime.innerHTML = "Computation time: " + localTime.toLocaleString(DateTime.DATETIME_MED);
                 button.disabled = false;
@@ -597,7 +597,7 @@
                 </select>
             </li>
             <li>
-                <div id="experimental"><button id="tryFastUpdateBtn" onclick="tryFastUpdate()" >try fast update</button></div>
+                <div id="fastUpdate" hidden><button id="tryFastUpdateBtn" onclick="tryFastUpdate()" >Update</button></div>
             </li>
         </ul>
     </section>
