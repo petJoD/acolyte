@@ -509,16 +509,18 @@
             let localTime = DateTime.now();
             let argStartTime = DateTime.fromISO(startArg);
             let argEndTime = DateTime.fromISO(endArg);
+            let fieldStartTime = DateTime.fromISO(datePickerStart.value);
+            let fieldEndTime = DateTime.fromISO(datePickerEnd.value);
             if (argStartTime.isValid) {
                 datePickerStart.value = argStartTime.toISODate();
             }
-            else {
+            else if (! fieldStartTime.isValid) {
                 datePickerStart.value = localTime.toISODate();
             }
             if (argEndTime.isValid) {
                 datePickerEnd.value = argEndTime.toISODate();
             }
-            else {
+            else if (! fieldEndTime.isValid) {
                 datePickerEnd.value = localTime.toISODate();
             }       
             let onStartChange = function () {
