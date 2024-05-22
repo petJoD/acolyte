@@ -22,7 +22,7 @@
         $(document).ready(function () {
 
             let datePickerStart = document.getElementById('datePickerStart');
-            //let datePickerEnd = document.getElementById('datePickerEnd');
+            let datePickerEnd = document.getElementById('datePickerEnd');
 
             let startTime = document.getElementById('startTime');
             let endTime = document.getElementById('endTime');
@@ -35,21 +35,16 @@
                     + localTime.toLocaleString(DateTime.DATETIME_MED) + " local Time</b>";            
             };
             let onEndChange = function() {
-                const exceptEndTime = DateTime.fromSeconds(1710691200);
-                const easternTime = exceptEndTime.setZone("America/New_York");
-                const localTime = exceptEndTime.setZone(tzid);
-                endTime.innerHTML = "<b>" + easternTime.toLocaleString(DateTime.DATETIME_MED) + " Eastern Time<br>"
-                    + localTime.toLocaleString(DateTime.DATETIME_MED) + " local Time</b>"; 
-                // const pacificTime = DateTime.fromISO(datePickerEnd.value)
-                //    .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
-                // const localTime = pacificTime.setZone(tzid);
-                // endTime.innerHTML = "<b>" + pacificTime.toLocaleString(DateTime.DATETIME_MED) + " Pacific Time<br>"
-                //     + localTime.toLocaleString(DateTime.DATETIME_MED) + " local Time</b>";            
+                const pacificTime = DateTime.fromISO(datePickerEnd.value)
+                    .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
+                const localTime = pacificTime.setZone(tzid);
+                endTime.innerHTML = "<b>" + pacificTime.toLocaleString(DateTime.DATETIME_MED) + " Pacific Time<br>"
+                    + localTime.toLocaleString(DateTime.DATETIME_MED) + " local Time</b>";            
             };
             onStartChange();
             onEndChange();
             datePickerStart.addEventListener('change', onStartChange);
-            //datePickerEnd.addEventListener('change', onEndChange);
+            datePickerEnd.addEventListener('change', onEndChange);
         });
 
         async function createReport() {
@@ -114,7 +109,6 @@
                     .setZone("America/Los_Angeles", { keepLocalTime: true }).startOf('day');
                 const reportDateEnd = DateTime.fromISO(inputDateEnd)
                     .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
-                //const reportDateEnd = DateTime.fromSeconds(1710691200);
                 
                 function retrieveDataWFM() {
 
@@ -246,14 +240,14 @@
             <li>
                 <h3>Starting Day</h3>
                 <p>
-                    <input type="date" id="datePickerStart" value="2024-03-12"/>
+                    <input type="date" id="datePickerStart" value="2024-05-21"/>
                 </p>
                 <p id="startTime"> ? </p>
             </li>
             <li>
                 <h3>Ending Day</h3>
                 <p>
-                    <input type="date" id="datePickerEnd" value="2024-03-17"/>
+                    <input type="date" id="datePickerEnd" value="2024-05-26"/>
                 </p>
                 <p id="endTime"> ? </p>
             </li>
