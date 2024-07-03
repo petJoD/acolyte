@@ -543,6 +543,9 @@
             };
             let onTaskChange = function() {
                 scanDone = false;
+                if (taskIdField.value.startsWith("https://writeforme.org/task/")) {
+                    taskIdField.value = taskIdField.value.substr(28);
+                }
                 resetResultTable();
             }
             let onLinesChange = function(){
