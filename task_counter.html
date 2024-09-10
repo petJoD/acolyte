@@ -4,7 +4,7 @@
 <head>
     <meta http-equiv="Content-type" content="text/html; charset=utf-8">
 
-    <title>Single-Day Task Report</title>
+    <title>Task Counter</title>
     <link rel="stylesheet" type="text/css" href="style.css" />
 
     <script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.7.0.js"></script>
@@ -88,11 +88,8 @@
             }, {});
 
             let typistsNames = Object.keys(groupedData);
-            const ac_array = ["pumba", "petitJ"];
             if (sortMethod == "name") {
                 typistsNames.sort(function (a, b) {
-                    let c0 = ac_array.indexOf(b) - ac_array.indexOf(a);
-                    if (c0 != 0) return c0;
                     return Intl.Collator().compare(a,b);
                 });
             }
@@ -229,6 +226,26 @@
             }
         }
 
+        async function submitParams() {
+            let taskID = document.getElementById('taskId').value;
+
+            let inputDateStart = document.getElementById('datePickerStart').value;
+            let inputDateEnd = document.getElementById('datePickerEnd').value;
+            const lines = document.getElementById('taskLinesBooty').value;
+            if (taskID.length == 0) {
+                alert("Please provide a Task ID to create the report.");
+            } else if (inputDateStart.length == 0 || inputDateEnd.length == 0) {
+                alert("Please select the starting and ending day.");
+            } else {
+                let urlParams = new URLSearchParams(window.location.search);
+                urlParams.set("task", taskID);
+                urlParams.set("start", inputDateStart);
+                urlParams.set("end", inputDateEnd);
+                urlParams.set("lines", lines);
+                window.location.search = urlParams;
+            }
+        }
+
         async function createReport() {
 
             let taskID = document.getElementById('taskId').value;
@@ -236,137 +253,135 @@
             let inputDateStart = document.getElementById('datePickerStart').value;
             let inputDateEnd = document.getElementById('datePickerEnd').value;
 
+            if (taskID.length == 0 || inputDateStart.length == 0 || inputDateEnd.length == 0) {
+                return;
+            }
+
             let button = document.getElementById('submitButton');
             let loader = document.getElementById("loader");
             let loaderText = document.getElementById("loaderText");
             let button2 = document.getElementById("tryFastUpdateBtn");
 
-            if (taskID.length == 0) {
-                alert("Please provide a Task ID to create the report.");
-            } else if (inputDateStart.length == 0 || inputDateEnd.length == 0) {
-                alert("Please select the starting and ending day.");
-            } else {
+            button.disabled = true;
+            button2.disabled = true;
 
-                button.disabled = true;
-                button2.disabled = true;
+            let table = document.getElementById("reportTable");
+            table.innerHTML = "";
 
-                let table = document.getElementById("reportTable");
-                table.innerHTML = "";
+            document.getElementById("resultHead").hidden = true;
+            document.getElementById("taskName").innerHTML = "";
 
-                document.getElementById("resultHead").hidden = true;
-                document.getElementById("taskName").innerHTML = "";
+            loader.hidden = false;
+            loaderText.innerHTML = "Retrieving tasks from <b>WFM</b>...";
+            loaderText.hidden = false;
 
-                loader.hidden = false;
-                loaderText.innerHTML = "Retrieving tasks from <b>WFM</b>...";
-                loaderText.hidden = false;
+            let setting = {
+                limit: 25,
+                listType: "taskSolutions",
+                query: "",
+                skip: 0,
+                sortAsc: false,
+                sortBy: "created",
+                task: taskID
+            };
 
-                let setting = {
-                    limit: 25,
-                    listType: "taskSolutions",
-                    query: "",
-                    skip: 0,
-                    sortAsc: false,
-                    sortBy: "created",
-                    task: taskID
-                };
+            let records = 0;
+            
+            totalRecords = 0;
 
-                let records = 0;
-                
-                totalRecords = 0;
+            typistCompletions.length = 0;
 
-                typistCompletions.length = 0;
+            let noWfmError = true;
+            let continueApiRequests = true;
 
-                let noWfmError = true;
-                let continueApiRequests = true;
+            reportDateStart = DateTime.fromISO(inputDateStart)
+                .setZone("America/Los_Angeles", { keepLocalTime: true }).startOf('day');
+            reportDateEnd = DateTime.fromISO(inputDateEnd)
+                .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
 
-                reportDateStart = DateTime.fromISO(inputDateStart)
-                    .setZone("America/Los_Angeles", { keepLocalTime: true }).startOf('day');
-                reportDateEnd = DateTime.fromISO(inputDateEnd)
-                    .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
+            let dataCapture = function(data, resolve) {
+                loaderText.innerHTML = "Received " + data.solutions.length + " tasks, handling them...";
+                if (totalRecords == 0) {
+                    totalRecords = data.totalCount;
+                }
+                else if (totalRecords != data.totalCount) {
+                    alert("Record number changed since data retrieval start. Restart to avoid false results.");
+                    totalRecords = data.totalCount;
+                }
 
-                let dataCapture = function(data, resolve) {
-                    loaderText.innerHTML = "Received " + data.solutions.length + " tasks, handling them...";
-                    if (totalRecords == 0) {
-                        totalRecords = data.totalCount;
-                    }
-                    else if (totalRecords != data.totalCount) {
-                        alert("Record number changed since data retrieval start. Restart to avoid false results.");
-                        totalRecords = data.totalCount;
-                    }
+                if (data.solutions.length > 0) {
+                    taskIdData = data.solutions[0].task._id;
+                    taskNameData = data.solutions[0].task.name;
+                }
+                else {
+                    continueApiRequests = false;
+                }
+                const retrieveTime = DateTime.now();
 
-                    if (data.solutions.length > 0) {
-                        taskIdData = data.solutions[0].task._id;
-                        taskNameData = data.solutions[0].task.name;
-                    }
-                    else {
+                for (let index = 0; index < data.solutions.length; index++) {
+
+                    const element = data.solutions[index];
+
+                    //let userDate = new Date(element.created);
+                    let userDate = DateTime.fromISO(element.created);
+                    typistCompletions.push(
+                            {
+                                name: element.userName,
+                                userId: element.realUser != null ? element.realUser._id : "DELETED USER",
+                                photo: element.realUser != null ? element.realUser.lowPhoto : undefined,
+                                time: element.totalTime,
+                                mistakes: element.mistakes,
+                                date: element.created,
+                                retrieved: retrieveTime.toISO(),
+                                rank: index+setting.skip,
+                                among: totalRecords
+                            }
+                        );
+                    if (userDate < reportDateStart) {
                         continueApiRequests = false;
                     }
-                    const retrieveTime = DateTime.now();
-
-                    for (let index = 0; index < data.solutions.length; index++) {
-
-                        const element = data.solutions[index];
-
-                        //let userDate = new Date(element.created);
-                        let userDate = DateTime.fromISO(element.created);
-                        typistCompletions.push(
-                                {
-                                    name: element.userName,
-                                    userId: element.realUser != null ? element.realUser._id : "DELETED USER",
-                                    photo: element.realUser != null ? element.realUser.lowPhoto : undefined,
-                                    time: element.totalTime,
-                                    mistakes: element.mistakes,
-                                    date: element.created,
-                                    retrieved: retrieveTime.toISO(),
-                                    rank: index+setting.skip,
-                                    among: totalRecords
-                                }
-                            );
-                        if (userDate < reportDateStart) {
-                            continueApiRequests = false;
-                        }
-                    }
-
-                    records += setting.limit;
-                    setting.skip += setting.limit;
-
-                    if (continueApiRequests) {
-                        loaderText.innerHTML = "Waiting 3s before asking again (seen " + records + " tasks so far)...";
-                        setTimeout(resolve, 3000);                                          // 3 second cooldown before a new request to WFM is sent
-                    } else {
-                        resolve();
-                    }
-
                 }
 
-                while (records <= totalRecords && continueApiRequests && noWfmError) {
-                    await acolyte.wfm_scan.getSolutions(dataCapture, setting).catch(() => noWfmError = false);
+                records += setting.limit;
+                setting.skip += setting.limit;
+
+                if (continueApiRequests) {
+                    loaderText.innerHTML = "Waiting 3s before asking again (seen " + records + " tasks so far)...";
+                    setTimeout(resolve, 3000);                                          // 3 second cooldown before a new request to WFM is sent
+                } else {
+                    resolve();
                 }
-
-                loaderText.innerHTML = "Building result table now.";
-                scanDone = true;
-
-                if (noWfmError) {
-                    updateResultTable(table, totalRecords);
-                }
-
-                loaderText.innerHTML = "Done.";
-                loaderText.hidden = true;
-
-                updateStartEndTime();
-
-                let computationTime = document.getElementById('computationTime');
-
-                let localTime = DateTime.now();
-                if (localTime < reportDateEnd) {
-                    document.getElementById("fastUpdate").hidden = false;
-                }
-                computationTime.innerHTML = "Computation time: " + localTime.toLocaleString(DateTime.DATETIME_MED);
-                button.disabled = false;
-                button2.disabled = false;
-                loader.hidden = true;
 
             }
+
+            while (records <= totalRecords && continueApiRequests && noWfmError) {
+                await acolyte.wfm_scan.getSolutions(dataCapture, setting).catch(() => noWfmError = false);
+            }
+
+            loaderText.innerHTML = "Building result table now.";
+            scanDone = true;
+
+            if (noWfmError) {
+                updateResultTable(table, totalRecords);
+            }
+
+            loaderText.innerHTML = "Done.";
+            loaderText.hidden = true;
+
+            updateStartEndTime();
+
+            let computationTime = document.getElementById('computationTime');
+
+            let localTime = DateTime.now();
+            if (localTime < reportDateEnd) {
+                document.getElementById("fastUpdate").hidden = false;
+            }
+            computationTime.innerHTML = "Computation time: " + localTime.toLocaleString(DateTime.DATETIME_MED);
+            button.disabled = false;
+            button2.disabled = false;
+            loader.hidden = true;
+
+
 
         }
 
@@ -493,6 +508,7 @@
                 
             }
         }
+
         $(document).ready(function () {
 
             let datePickerStart = document.getElementById('datePickerStart');
@@ -504,13 +520,16 @@
             const urlParams = new URLSearchParams(window.location.search);
             const startArg = urlParams.get('start');
             const endArg = urlParams.get('end');
-            const taskId = urlParams.get('task');
-
+            
             let localTime = DateTime.now();
             let argStartTime = DateTime.fromISO(startArg);
             let argEndTime = DateTime.fromISO(endArg);
             let fieldStartTime = DateTime.fromISO(datePickerStart.value);
             let fieldEndTime = DateTime.fromISO(datePickerEnd.value);
+            if (urlParams.has('task')) {
+                const taskId = urlParams.get('task');
+                taskIdField.value = taskId;
+            }
             if (argStartTime.isValid) {
                 datePickerStart.value = argStartTime.toISODate();
             }
@@ -522,7 +541,12 @@
             }
             else if (! fieldEndTime.isValid) {
                 datePickerEnd.value = localTime.toISODate();
-            }       
+            }
+            if (urlParams.has('lines')){
+                const lines = urlParams.get('lines');
+                taskLinesBooty.value = lines;
+            }
+   
             let onStartChange = function () {
                 scanDone = false;
                 let dateStart = DateTime.fromISO(datePickerStart.value);
@@ -552,6 +576,9 @@
                 let table = document.getElementById("reportTable");
                 table.innerHTML = "";
                 updateResultTable(table, totalRecords);
+                let url = new URL(window.location.href);
+                url.searchParams.set('lines', taskLinesBooty.value);
+                window.history.replaceState({},'Task Counter', url.toString());
             }
             let onSortChange = function(){
                 let table = document.getElementById("reportTable");
@@ -564,6 +591,7 @@
             taskIdField.addEventListener('change', onTaskChange);
             taskLinesBooty.addEventListener('change', onLinesChange)
             sortSelect.addEventListener('change', onSortChange);
+            createReport();
         });
     </script>
 </head>
@@ -573,7 +601,7 @@
     <section>
         <h1>Task Counter</h1>
         <b>Mistress Erica</b> Edition<br>
-        Ver. 3.1.7
+        Ver. 3.2.0
         <ul>
             <li>
                 <label for="datePickerStart">Starting Day</label>
@@ -588,7 +616,7 @@
                 <input type="text" id="taskId" size="30" />
             </li>
             <li>
-                <button id="submitButton" onclick="createReport()" :hover>Submit</button>
+                <button id="submitButton" onclick="submitParams()" :hover>Submit</button>
             </li>
             <li>
                 <label for="taskLinesBooty">Lines/Booty</label>
@@ -598,7 +626,7 @@
                 <label for="sortSelect">Sort by</label>
                 <select name="sort" id="sortSelect">
                     <option value="tally" selected>Last completion time (most recent first)</option>
-                    <option value="name">WFM name (A to Z), acolytes first</option>
+                    <option value="name">WFM name (A to Z)</option>
                 </select>
             </li>
             <li>
