@@ -23,6 +23,7 @@
         let reportDateStart;
         let reportDateEnd;
         let scanDone = false;
+        let sortMethod = 'tally';
 
         function updateStartEndTime() {
             let startTime = document.getElementById('startTime');
@@ -48,8 +49,7 @@
                 return;
             }
             let taskLinesBooty = document.getElementById('taskLinesBooty').value;
-            let sortMethod = document.getElementById('sortSelect').value;           
-
+      
             let groupedData = typistCompletions.reduce((previous, current) => {
                 if (DateTime.fromISO(current.date) < reportDateStart || DateTime.fromISO(current.date) > reportDateEnd) {
                     return previous;
@@ -145,7 +145,22 @@
                 document.getElementById("taskName").innerHTML = "<h2><a href='https://writeforme.org/task/" + taskIdData + "' target='_blank'>" + taskNameData + "</a></h2>";
                 document.getElementById("resultHead").hidden = false;
             }
-            headerTitle1.innerHTML = "WFM USER";
+            if (sortMethod == "name") {
+                headerTitle1.innerHTML = "WFM USER <span>↑</span>";
+            }
+            else {
+                headerTitle1.innerHTML = "WFM USER <span>-</span>";
+            }
+            headerTitle1.addEventListener('click', function() {
+                if (sortMethod == "name") {
+                    sortMethod = "tally";
+                }
+                else {
+                    sortMethod = "name";
+                }
+                table.innerHTML = "";
+                updateResultTable(table, totalRecords);
+            });
             headerTitle1.colSpan = 2;
             headerTitle2.innerHTML = "COUNT";
             headerTitle3.innerHTML = "MISTAKES";
@@ -176,6 +191,7 @@
                     let link = document.createElement("a");
                     link.setAttribute("href","https://writeforme.org/profile/"+groupedData[element].userId);
                     link.setAttribute("target","_blank");
+                    link.setAttribute("class","pfp");
                     cell1.appendChild(link);
                     elem = link;
                 }
@@ -200,17 +216,18 @@
 
             row = tfoot.insertRow();
 
-            let tdf1_2 = row.insertCell(0);
-            tdf1_2.colSpan = 2;
-            let tdf3 = row.insertCell(1);
-            let tdf4 = row.insertCell(2);
-            let tdf5 = row.insertCell(3);
+            let tdf1 = row.insertCell(0);
+            let tdf2 = row.insertCell(1);
+            let tdf3 = row.insertCell(2);
+            let tdf4 = row.insertCell(3);
+            let tdf5 = row.insertCell(4);
             let tdf6 ;
             if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                tdf6 = row.insertCell(4);
+                tdf6 = row.insertCell(5);
             }
 
-            tdf1_2.innerHTML = "TOTALS:";
+            tdf1.innerHTML = "TOTALS:";
+            tdf2.innerHTML = new Intl.NumberFormat().format(typistsNames.length);
             tdf3.innerHTML =  new Intl.NumberFormat().format(totalTaskCount) ;
             tdf4.innerHTML =  new Intl.NumberFormat().format(totalMistakeCount) ;
             tdf5.innerHTML = convertMsToTime(totalTimeCount) ;
@@ -218,7 +235,7 @@
                 tdf6.innerHTML = new Intl.NumberFormat().format(totalTaskCount * taskLinesBooty) ;
             }
 
-            tdf1_2.style = "color: white; font-size: 15px; font-weight: bold; "
+            tdf1.style = "color: white; font-size: 15px; font-weight: bold; "
             tdf3.style = "color: white; font-size: 25px; font-weight: 500; "
 
             if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
@@ -515,7 +532,6 @@
             let datePickerEnd = document.getElementById('datePickerEnd');
             let taskIdField = document.getElementById('taskId');
             let taskLinesBooty = document.getElementById('taskLinesBooty');
-            let sortSelect = document.getElementById('sortSelect');
 
             const urlParams = new URLSearchParams(window.location.search);
             const startArg = urlParams.get('start');
@@ -580,17 +596,11 @@
                 url.searchParams.set('lines', taskLinesBooty.value);
                 window.history.replaceState({},'Task Counter', url.toString());
             }
-            let onSortChange = function(){
-                let table = document.getElementById("reportTable");
-                table.innerHTML = "";
-                updateResultTable(table, totalRecords);
-            }
 
             datePickerStart.addEventListener('change', onStartChange);
             datePickerEnd.addEventListener('change', onEndChange);
             taskIdField.addEventListener('change', onTaskChange);
             taskLinesBooty.addEventListener('change', onLinesChange)
-            sortSelect.addEventListener('change', onSortChange);
             createReport();
         });
     </script>
@@ -601,7 +611,7 @@
     <section>
         <h1>Task Counter</h1>
         <b>Mistress Erica</b> Edition<br>
-        Ver. 3.2.0
+        Ver. 3.2.1
         <ul>
             <li>
                 <label for="datePickerStart">Starting Day</label>
@@ -621,13 +631,6 @@
             <li>
                 <label for="taskLinesBooty">Lines/Booty</label>
                 <input type="number" id="taskLinesBooty" size="10" min="0" value="25" />
-            </li>
-            <li>
-                <label for="sortSelect">Sort by</label>
-                <select name="sort" id="sortSelect">
-                    <option value="tally" selected>Last completion time (most recent first)</option>
-                    <option value="name">WFM name (A to Z)</option>
-                </select>
             </li>
             <li>
                 <div id="fastUpdate" hidden><button id="tryFastUpdateBtn" onclick="tryFastUpdate()" >Update</button></div>

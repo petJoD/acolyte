@@ -58,6 +58,10 @@ a {
     color: rgb(240, 240, 240);
 }
 
+a.pfp {
+    font-size: 5px;
+}
+
 a:link {
     text-decoration: none;
 }
