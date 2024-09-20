@@ -15,3 +15,5 @@ Repository for all tools that may be useful for acolyte tasks set by Mistress Er
 ## gif tools
 
 * [ezgif](https://ezgif.com/video-to-gif)
+* [imghippo](https://www.imghippo.com)
+  
