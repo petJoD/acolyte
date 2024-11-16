@@ -12,8 +12,8 @@ Repository for all tools that may be useful for acolyte tasks set by Mistress Er
 * [task counter](task_counter.html)
 * [domestic chores loop on a page](domestic_chores.html)
 
-## gif tools
+## other tools
 
 * [ezgif](https://ezgif.com/video-to-gif)
 * [imghippo](https://www.imghippo.com)
-  
+* [botghost](https://dashboard.botghost.com/dashboard)
