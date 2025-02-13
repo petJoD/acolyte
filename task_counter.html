@@ -24,6 +24,24 @@
         let reportDateEnd;
         let scanDone = false;
         let sortMethod = 'tally';
+        let sortDirection = 1;
+
+        function padTo2Digits(num) {
+            return num.toString().padStart(2, '0');
+        }
+
+        function convertMsToTime(milliseconds) {
+
+            let seconds = Math.floor(milliseconds / 1000);
+            let minutes = Math.floor(seconds / 60);
+            let hours = Math.floor(minutes / 60);
+
+            seconds = seconds % 60;
+            minutes = minutes % 60;
+
+            return padTo2Digits(hours) + ":" + padTo2Digits(minutes) + ":" + padTo2Digits(seconds);
+
+        }
 
         function updateStartEndTime() {
             let startTime = document.getElementById('startTime');
@@ -44,6 +62,15 @@
             document.getElementById("fastUpdate").hidden = true;
         }
 
+        function updateTaskInfos(totalRecords) {
+            document.getElementById("seenRecords").innerHTML = new Intl.NumberFormat().format(typistCompletions.length) ;
+            document.getElementById("totalRecords").innerHTML = new Intl.NumberFormat().format(totalRecords) ;
+            if (typistCompletions.length != 0) {
+                document.getElementById("taskName").innerHTML = "<h2><a href='https://writeforme.org/task/" + taskIdData + "' target='_blank'>" + taskNameData + "</a></h2>";
+                document.getElementById("resultHead").hidden = false;
+            }
+
+        }
         function updateResultTable(table, totalRecords) {
             if (! scanDone) {
                 return;
@@ -90,11 +117,9 @@
             let typistsNames = Object.keys(groupedData);
             if (sortMethod == "name") {
                 typistsNames.sort(function (a, b) {
-                    return Intl.Collator().compare(a,b);
+                    return sortDirection * Intl.Collator().compare(a,b);
                 });
             }
-            document.getElementById("seenRecords").innerHTML = new Intl.NumberFormat().format(typistCompletions.length) ;
-            document.getElementById("totalRecords").innerHTML = new Intl.NumberFormat().format(totalRecords) ;
 
             let totalTaskCount = 0;
             let totalTimeCount = 0;
@@ -108,22 +133,6 @@
 
             });
 
-            function padTo2Digits(num) {
-                return num.toString().padStart(2, '0');
-            }
-
-            function convertMsToTime(milliseconds) {
-
-                let seconds = Math.floor(milliseconds / 1000);
-                let minutes = Math.floor(seconds / 60);
-                let hours = Math.floor(minutes / 60);
-
-                seconds = seconds % 60;
-                minutes = minutes % 60;
-
-                return padTo2Digits(hours) + ":" + padTo2Digits(minutes) + ":" + padTo2Digits(seconds);
-
-            }
 
             let header = table.createTHead();
             let tbody = table.createTBody();
@@ -140,11 +149,6 @@
                 headerTitle5 = headerRow.insertCell(4);
             }
 
-            if (typistCompletions.length != 0) {
-
-                document.getElementById("taskName").innerHTML = "<h2><a href='https://writeforme.org/task/" + taskIdData + "' target='_blank'>" + taskNameData + "</a></h2>";
-                document.getElementById("resultHead").hidden = false;
-            }
             if (sortMethod == "name") {
                 headerTitle1.innerHTML = "WFM USER <span>↑</span>";
             }
@@ -154,9 +158,11 @@
             headerTitle1.addEventListener('click', function() {
                 if (sortMethod == "name") {
                     sortMethod = "tally";
+                    sortDirection = 1;
                 }
                 else {
                     sortMethod = "name";
+                    sortDirection = 1;
                 }
                 table.innerHTML = "";
                 updateResultTable(table, totalRecords);
@@ -379,6 +385,7 @@
             scanDone = true;
 
             if (noWfmError) {
+                updateTaskInfos(totalRecords);
                 updateResultTable(table, totalRecords);
             }
 
@@ -509,6 +516,7 @@
                 scanDone = true;
 
                 if (noWfmError) {
+                    updateTaskInfos(totalRecords);
                     updateResultTable(table, totalRecords);
                 }
 
