@@ -53,8 +53,10 @@
         }
 
         function resetResultTable() {
-            let table = document.getElementById("reportTable");
-            table.innerHTML = "";
+            let tbody = document.getElementById("reportTableBody");
+            let tfoot = document.getElementById('reportTableFoot');
+            tbody.innerHTML = "";
+            tfoot.innerHTML = "";
 
             document.getElementById("resultHead").hidden = true;
             document.getElementById("taskName").innerHTML = "";
@@ -71,7 +73,95 @@
             }
 
         }
-        function updateResultTable(table, totalRecords) {
+
+        function addSortEvent(headerCell, method, body, footer, bidir) {
+            if (bidir) {
+                headerCell.addEventListener('click', function() {
+                    if (sortMethod == method) {
+                        if (sortDirection == 1) {
+                            sortDirection = -1;
+                        }
+                        else {
+                            sortMethod = "tally";
+                            sortDirection = 1;
+                        }
+                    }
+                    else {
+                        sortMethod = method;
+                        sortDirection = 1;
+                    }
+                    onSortMethodChange();     
+                    body.innerHTML = "";
+                    footer.innerHTML = "";
+                    updateResultTable(body, footer, totalRecords); 
+                });
+            }
+            else {
+                headerCell.addEventListener('click', function() {
+                    if (sortMethod == method) {
+                        sortMethod = "tally";
+                        sortDirection = 1;
+                    }
+                    else {
+                        sortMethod = method;
+                        sortDirection = 1;
+                    }
+                    onSortMethodChange();     
+                    body.innerHTML = "";
+                    footer.innerHTML = "";
+                    updateResultTable(body, footer, totalRecords); 
+                });
+            }
+        }
+
+        function onSortMethodChange() {
+            const sortMethods = ['name', 'count', 'mistakes', 'time'];
+            sortMethods.forEach(function(method) {
+                let e = document.getElementById("sort-" + method);
+                if (method == sortMethod)  {
+                    if (sortDirection == 1) {
+                        e.innerHTML = "↑";
+                    } 
+                    else {
+                        e.innerHTML = "↓";
+                    }
+                }
+                else {
+                    e.innerHTML = "-";
+                }
+            })     
+        }
+        function buildTableHeader(header, body, footer) {
+
+            let taskLinesBooty = document.getElementById('taskLinesBooty').value;
+            let headerRow = header.insertRow();
+            const sortsMethods = ['name', 'count', 'mistakes', 'time'];
+            let headerTitle1 = headerRow.insertCell(0);
+            let headerTitle2 = headerRow.insertCell(1);
+            let headerTitle3 = headerRow.insertCell(2);
+            let headerTitle4 = headerRow.insertCell(3);
+            let headerTitle5;
+            if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                headerTitle5 = headerRow.insertCell(4);
+            }
+
+            headerTitle1.innerHTML = "WFM USER <span id='sort-name'></span>";
+            headerTitle1.colSpan = 2;
+            addSortEvent(headerTitle1, "name", body, footer, false);
+
+            headerTitle2.innerHTML = "COUNT <span id='sort-count'></span>";
+            addSortEvent(headerTitle2, "count", body, footer, true);
+            headerTitle3.innerHTML = "MISTAKES <span id='sort-mistakes'></span>";
+            addSortEvent(headerTitle3, "mistakes", body, footer, true);
+            headerTitle4.innerHTML = "H:M:S <span id='sort-time'></span>";
+            addSortEvent(headerTitle4, "time", body, footer, true);
+            if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
+                headerTitle5.innerHTML = "LINES <span id='sort-lines'></span>";
+            }
+            onSortMethodChange();
+        }
+
+        function updateResultTable(tbody, tfoot, totalRecords) {
             if (! scanDone) {
                 return;
             }
@@ -120,6 +210,11 @@
                     return sortDirection * Intl.Collator().compare(a,b);
                 });
             }
+            if (sortMethod == "count" || sortMethod =="mistakes" || sortMethod == "time") {
+                typistsNames.sort(function(a,b) {
+                    return sortDirection *(groupedData[a][sortMethod] - groupedData[b][sortMethod]);
+                });
+            }
 
             let totalTaskCount = 0;
             let totalTimeCount = 0;
@@ -132,48 +227,6 @@
                 totalMistakeCount = totalMistakeCount + groupedData[element].mistakes;
 
             });
-
-
-            let header = table.createTHead();
-            let tbody = table.createTBody();
-            let tfoot = table.createTFoot();
-
-            let headerRow = header.insertRow();
-
-            let headerTitle1 = headerRow.insertCell(0);
-            let headerTitle2 = headerRow.insertCell(1);
-            let headerTitle3 = headerRow.insertCell(2);
-            let headerTitle4 = headerRow.insertCell(3);
-            let headerTitle5;
-            if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                headerTitle5 = headerRow.insertCell(4);
-            }
-
-            if (sortMethod == "name") {
-                headerTitle1.innerHTML = "WFM USER <span>↑</span>";
-            }
-            else {
-                headerTitle1.innerHTML = "WFM USER <span>-</span>";
-            }
-            headerTitle1.addEventListener('click', function() {
-                if (sortMethod == "name") {
-                    sortMethod = "tally";
-                    sortDirection = 1;
-                }
-                else {
-                    sortMethod = "name";
-                    sortDirection = 1;
-                }
-                table.innerHTML = "";
-                updateResultTable(table, totalRecords);
-            });
-            headerTitle1.colSpan = 2;
-            headerTitle2.innerHTML = "COUNT";
-            headerTitle3.innerHTML = "MISTAKES";
-            headerTitle4.innerHTML = "H:M:S";
-            if (taskLinesBooty.length != 0 && taskLinesBooty != 0) {
-                headerTitle5.innerHTML = "LINES";
-            }
 
 
             let row;
@@ -288,8 +341,10 @@
             button.disabled = true;
             button2.disabled = true;
 
-            let table = document.getElementById("reportTable");
-            table.innerHTML = "";
+            let tbody = document.getElementById("reportTableBody");
+            let tfoot = document.getElementById('reportTableFoot');
+            tbody.innerHTML = "";
+            tfoot.innerHTML = "";
 
             document.getElementById("resultHead").hidden = true;
             document.getElementById("taskName").innerHTML = "";
@@ -386,7 +441,7 @@
 
             if (noWfmError) {
                 updateTaskInfos(totalRecords);
-                updateResultTable(table, totalRecords);
+                updateResultTable(tbody, tfoot, totalRecords);
             }
 
             loaderText.innerHTML = "Done.";
@@ -425,8 +480,10 @@
 
                 button.disabled = true;
                 button2.disabled = true;
-                let table = document.getElementById("reportTable");
-                table.innerHTML = "";
+                let tbody = document.getElementById("reportTableBody");
+                let tfoot = document.getElementById('reportTableFoot');
+                tbody.innerHTML = "";
+                tfoot.innerHTML = "";
 
                 loader.hidden = false;
                 loaderText.innerHTML = "Retrieving tasks from <b>WFM</b>...";
@@ -517,7 +574,7 @@
 
                 if (noWfmError) {
                     updateTaskInfos(totalRecords);
-                    updateResultTable(table, totalRecords);
+                    updateResultTable(tbody, tfoot, totalRecords);
                 }
 
                 loaderText.innerHTML = "Done.";
@@ -540,6 +597,9 @@
             let datePickerEnd = document.getElementById('datePickerEnd');
             let taskIdField = document.getElementById('taskId');
             let taskLinesBooty = document.getElementById('taskLinesBooty');
+            let thead = document.getElementById("reportTableHead");
+            let tbody = document.getElementById("reportTableBody");
+            let tfoot = document.getElementById('reportTableFoot');
 
             const urlParams = new URLSearchParams(window.location.search);
             const startArg = urlParams.get('start');
@@ -571,6 +631,7 @@
                 taskLinesBooty.value = lines;
             }
    
+            buildTableHeader(thead, tbody, tfoot);
             let onStartChange = function () {
                 scanDone = false;
                 let dateStart = DateTime.fromISO(datePickerStart.value);
@@ -597,9 +658,11 @@
                 resetResultTable();
             }
             let onLinesChange = function(){
-                let table = document.getElementById("reportTable");
-                table.innerHTML = "";
-                updateResultTable(table, totalRecords);
+                tbody.innerHTML = "";
+                tfoot.innerHTML = "";
+                thead.innerHTML = "";
+                buildTableHeader(thead, tbody, tfoot);
+                updateResultTable(tbody, tfoot, totalRecords);
                 let url = new URL(window.location.href);
                 url.searchParams.set('lines', taskLinesBooty.value);
                 window.history.replaceState({},'Task Counter', url.toString());
@@ -619,7 +682,7 @@
     <section>
         <h1>Task Counter</h1>
         <b>Mistress Erica</b> Edition<br>
-        Ver. 3.2.1
+        Ver. 3.2.2
         <ul>
             <li>
                 <label for="datePickerStart">Starting Day</label>
@@ -654,6 +717,9 @@
     </section>
     <br>
     <table class="center" id="reportTable">
+        <thead id="reportTableHead"></thead>
+        <tbody id="reportTableBody"></tbody>
+        <tfoot id="reportTableFoot"></tfoot>
     </table>
     <br>
     <div class="center">
