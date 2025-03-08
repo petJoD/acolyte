@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+
+    <title>Avatar generation test</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+
+    <script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.7.0.js"></script>
+    <script type="text/javascript" language="javascript" src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+    <script type="text/javascript" language="javascript" src="scripts/avatar.js"></script>
+    <script type="text/javascript">
+        async function testAvatar() {
+            let nameField = $('#nameInput');
+            const t = nameField[0].value;
+            console.log("text input is" + t);
+            const h = acolyte.avatar.hashText(t);
+            $('#hashCode').text("hasscode is " + h);
+            let svg = document.getElementById("dest");
+            acolyte.avatar.drawAvatar(h, svg, 512);
+        }
+     </script>
+</head>
+
+<body>
+
+    <h1>Avatar generation tester</h1>
+    <input type="text" id="nameInput" />
+    <button id="submitButton" onclick="testAvatar()" :hover>Test</button>
+    <br>
+    <div id="hashCode"></div>
+    <br>
+    <div id="dest"></div>
+
+
+    <footer>Heaven's Acolytes Tools © 2023-2024</footer>
+</body>
+
+</html>
