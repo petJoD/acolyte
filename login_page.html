@@ -16,377 +16,27 @@
         let DateTime = luxon.DateTime;
         const tzid = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-        async function submitParams() {
-            let taskID = document.getElementById('taskId').value;
-
-            let inputDateStart = document.getElementById('datePickerStart').value;
-            let inputDateEnd = document.getElementById('datePickerEnd').value;
-            const lines = document.getElementById('taskLinesBooty').value;
-            if (taskID.length == 0) {
-                alert("Please provide a Task ID to create the report.");
-            } else if (inputDateStart.length == 0 || inputDateEnd.length == 0) {
-                alert("Please select the starting and ending day.");
+        async function callLogin() {
+            let name = $('#userNameField')[0].value;
+            let passwd = $('#passwordField')[0].value;
+            if (name.length == 0 || passwd.length == 0) {
+                alert("Please provide login fields.");
             } else {
-                let urlParams = new URLSearchParams(window.location.search);
-                urlParams.set("task", taskID);
-                urlParams.set("start", inputDateStart);
-                urlParams.set("end", inputDateEnd);
-                urlParams.set("lines", lines);
-                window.location.search = urlParams;
-            }
-        }
+                let handleLoginData = function(data, resolve) {
+                    $('#loginResult')[0].innerHTML = JSON.stringify(data);
 
-        async function createReport() {
-
-            let taskID = document.getElementById('taskId').value;
-
-            let inputDateStart = document.getElementById('datePickerStart').value;
-            let inputDateEnd = document.getElementById('datePickerEnd').value;
-
-            if (taskID.length == 0 || inputDateStart.length == 0 || inputDateEnd.length == 0) {
-                return;
-            }
-
-            let button = document.getElementById('submitButton');
-            let loader = document.getElementById("loader");
-            let loaderText = document.getElementById("loaderText");
-            let button2 = document.getElementById("tryFastUpdateBtn");
-
-            button.disabled = true;
-            button2.disabled = true;
-
-            let tbody = document.getElementById("reportTableBody");
-            let tfoot = document.getElementById('reportTableFoot');
-            tbody.innerHTML = "";
-            tfoot.innerHTML = "";
-
-            document.getElementById("resultHead").hidden = true;
-            document.getElementById("taskName").innerHTML = "";
-
-            loader.hidden = false;
-            loaderText.innerHTML = "Retrieving tasks from <b>WFM</b>...";
-            loaderText.hidden = false;
-
-            let setting = {
-                limit: 25,
-                listType: "taskSolutions",
-                query: "",
-                skip: 0,
-                sortAsc: false,
-                sortBy: "created",
-                task: taskID
-            };
-
-            let records = 0;
-            
-            totalRecords = 0;
-
-            typistCompletions.length = 0;
-
-            let noWfmError = true;
-            let continueApiRequests = true;
-
-            reportDateStart = DateTime.fromISO(inputDateStart)
-                .setZone("America/Los_Angeles", { keepLocalTime: true }).startOf('day');
-            reportDateEnd = DateTime.fromISO(inputDateEnd)
-                .setZone("America/Los_Angeles", { keepLocalTime: true }).endOf('day');
-
-            let dataCapture = function(data, resolve) {
-                loaderText.innerHTML = "Received " + data.solutions.length + " tasks, handling them...";
-                if (totalRecords == 0) {
-                    totalRecords = data.totalCount;
-                }
-                else if (totalRecords != data.totalCount) {
-                    alert("Record number changed since data retrieval start. Restart to avoid false results.");
-                    totalRecords = data.totalCount;
-                }
-
-                if (data.solutions.length > 0) {
-                    taskIdData = data.solutions[0].task._id;
-                    taskNameData = data.solutions[0].task.name;
-                }
-                else {
-                    continueApiRequests = false;
-                }
-                const retrieveTime = DateTime.now();
-
-                for (let index = 0; index < data.solutions.length; index++) {
-
-                    const element = data.solutions[index];
-
-                    //let userDate = new Date(element.created);
-                    let userDate = DateTime.fromISO(element.created);
-                    typistCompletions.push(
-                            {
-                                name: element.userName,
-                                userId: element.realUser != null ? element.realUser._id : "DELETED USER",
-                                photo: element.realUser != null ? element.realUser.lowPhoto : undefined,
-                                time: element.totalTime,
-                                mistakes: element.mistakes,
-                                date: element.created,
-                                retrieved: retrieveTime.toISO(),
-                                rank: index+setting.skip,
-                                among: totalRecords
-                            }
-                        );
-                    if (userDate < reportDateStart) {
-                        continueApiRequests = false;
-                    }
-                }
-
-                records += setting.limit;
-                setting.skip += setting.limit;
-
-                if (continueApiRequests) {
-                    loaderText.innerHTML = "Waiting 3s before asking again (seen " + records + " tasks so far)...";
-                    setTimeout(resolve, 3000);                                          // 3 second cooldown before a new request to WFM is sent
-                } else {
                     resolve();
                 }
-
-            }
-
-            while (records <= totalRecords && continueApiRequests && noWfmError) {
-                await acolyte.wfm_scan.getSolutions(dataCapture, setting).catch(() => noWfmError = false);
-            }
-
-            loaderText.innerHTML = "Building result table now.";
-            scanDone = true;
-
-            if (noWfmError) {
-                updateTaskInfos(totalRecords);
-                updateResultTable(tbody, tfoot, totalRecords);
-            }
-
-            loaderText.innerHTML = "Done.";
-            loaderText.hidden = true;
-
-            updateStartEndTime();
-
-            let computationTime = document.getElementById('computationTime');
-
-            let localTime = DateTime.now();
-            if (localTime < reportDateEnd) {
-                document.getElementById("fastUpdate").hidden = false;
-            }
-            computationTime.innerHTML = "Computation time: " + localTime.toLocaleString(DateTime.DATETIME_MED);
-            button.disabled = false;
-            button2.disabled = false;
-            loader.hidden = true;
-
-
-
-        }
-
-        async function tryFastUpdate() {
-            if ((!scanDone)|| (typistCompletions.length == 0)) {
-                alert("button used when scanDone is false");
-            }
-            else {
-                let lastSeenCompletionTime = typistCompletions[0].date;
-
-                let taskID = document.getElementById('taskId').value;
-
-                let button = document.getElementById('submitButton');
-                let loader = document.getElementById("loader");
-                let loaderText = document.getElementById("loaderText");
-                let button2 = document.getElementById("tryFastUpdateBtn");
-
-                button.disabled = true;
-                button2.disabled = true;
-                let tbody = document.getElementById("reportTableBody");
-                let tfoot = document.getElementById('reportTableFoot');
-                tbody.innerHTML = "";
-                tfoot.innerHTML = "";
-
-                loader.hidden = false;
-                loaderText.innerHTML = "Retrieving tasks from <b>WFM</b>...";
-                loaderText.hidden = false;
-
-                let setting = {
-                    limit: 5,
-                    listType: "taskSolutions",
-                    query: "",
-                    skip: 0,
-                    sortAsc: false,
-                    sortBy: "created",
-                    task: taskID
+                let params = {
+                    username : name,
+                    password : passwd
                 };
-
-                let records = 0;
-
-                let noWfmError = true;
-                let continueApiRequests = true;
-
-                let dataMerge = function(data, resolve) {
-                    loaderText.innerHTML = "Received " + data.solutions.length + " tasks, handling them...";
-
-                    let delta = data.totalCount - totalRecords;
-                    //totalRecords = data.totalCount;
-                    const retrieveTime = DateTime.now();
-                    if (delta < 0) {
-                        alert("less completions found, unable to do a fast merge, use the submit button");
-                        continueApiRequests = false;
-                    }
-                    else {
-                        // goal: insert delta elements in typistCompletions and check the next ones are the expected one, update their retrieved infos
-                        for (let index = 0; index < data.solutions.length; index++) {
-                            const element = data.solutions[index];
-                            if (index < delta) {
-                                let userDate = DateTime.fromISO(element.created);
-                                typistCompletions.splice(index+setting.skip, 0,
-                                    {
-                                        name: element.userName,
-                                        userId: element.realUser != null ? element.realUser._id : "DELETED USER",
-                                        photo: element.realUser != null ? element.realUser.lowPhoto : undefined,
-                                        time: element.totalTime,
-                                        mistakes: element.mistakes,
-                                        date: element.created,
-                                        retrieved: retrieveTime.toISO(),
-                                        rank: index+setting.skip,
-                                        among: data.totalCount
-                                    }
-                                );
-                                ++totalRecords;
-                            }
-                            else {
-                                let stored = typistCompletions[index+setting.skip];
-                                if ((element.created === stored.date)
-                                    && (element.userName === stored.name)) {
-                                    stored.retrieved =  retrieveTime.toISO();
-                                    stored.rank = index+setting.skip;
-                                    stored.among = data.totalCount;
-                                }
-                                else {
-                                    alert("different task completion detected when it shouldn't, use submit to reset data");
-                                    continueApiRequests = false;
-                                    break;
-                                }
-                                continueApiRequests = false;
-                            }
-                        }
-
-                        records += data.solutions.length;
-                        setting.skip = records;                  
-                    }
-
-                    if (continueApiRequests) {
-                        loaderText.innerHTML = "Waiting 1s before asking again (seen " + records + " tasks so far)...";
-                        setTimeout(resolve, 1000);                                          // 3 second cooldown before a new request to WFM is sent
-                    } else {
-                        resolve();
-                    }
-
-                }
-
-                while (records <= totalRecords && continueApiRequests && noWfmError) {
-                    await acolyte.wfm_scan.getSolutions(dataMerge, setting).catch(() => noWfmError = false);
-                }
-
-                loaderText.innerHTML = "Building result table now.";
-                scanDone = true;
-
-                if (noWfmError) {
-                    updateTaskInfos(totalRecords);
-                    updateResultTable(tbody, tfoot, totalRecords);
-                }
-
-                loaderText.innerHTML = "Done.";
-                loaderText.hidden = true;
-
-                let computationTime = document.getElementById('computationTime');
-
-                let localTime = DateTime.now();
-                computationTime.innerHTML = "Computation time: " + localTime.toLocaleString(DateTime.DATETIME_MED);
-                button.disabled = false;
-                button2.disabled = false;
-                loader.hidden = true;
-                
+                await acolyte.wfm_scan.loginCall(handleLoginData, params);
             }
         }
 
         $(document).ready(function () {
 
-            let datePickerStart = document.getElementById('datePickerStart');
-            let datePickerEnd = document.getElementById('datePickerEnd');
-            let taskIdField = document.getElementById('taskId');
-            let taskLinesBooty = document.getElementById('taskLinesBooty');
-            let thead = document.getElementById("reportTableHead");
-            let tbody = document.getElementById("reportTableBody");
-            let tfoot = document.getElementById('reportTableFoot');
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const startArg = urlParams.get('start');
-            const endArg = urlParams.get('end');
-            
-            let localTime = DateTime.now();
-            let argStartTime = DateTime.fromISO(startArg);
-            let argEndTime = DateTime.fromISO(endArg);
-            let fieldStartTime = DateTime.fromISO(datePickerStart.value);
-            let fieldEndTime = DateTime.fromISO(datePickerEnd.value);
-            if (urlParams.has('task')) {
-                const taskId = urlParams.get('task');
-                taskIdField.value = taskId;
-            }
-            if (argStartTime.isValid) {
-                datePickerStart.value = argStartTime.toISODate();
-            }
-            else if (! fieldStartTime.isValid) {
-                datePickerStart.value = localTime.toISODate();
-            }
-            if (argEndTime.isValid) {
-                datePickerEnd.value = argEndTime.toISODate();
-            }
-            else if (! fieldEndTime.isValid) {
-                datePickerEnd.value = localTime.toISODate();
-            }
-            if (urlParams.has('lines')){
-                const lines = urlParams.get('lines');
-                taskLinesBooty.value = lines;
-            }
-   
-            buildTableHeader(thead, tbody, tfoot);
-            let onStartChange = function () {
-                scanDone = false;
-                let dateStart = DateTime.fromISO(datePickerStart.value);
-                let dateEnd = DateTime.fromISO(datePickerEnd.value);
-                if (dateEnd < dateStart) {
-                    datePickerEnd.value = datePickerStart.value;
-                }
-                resetResultTable();
-            };
-            let onEndChange = function() {
-                scanDone = false;
-                let dateStart = DateTime.fromISO(datePickerStart.value);
-                let dateEnd = DateTime.fromISO(datePickerEnd.value);
-                if (dateEnd < dateStart) {
-                    datePickerStart.value = datePickerEnd.value;
-                }
-                resetResultTable();
-            };
-            let onTaskChange = function() {
-                scanDone = false;
-                if (taskIdField.value.startsWith("https://writeforme.org/task/")) {
-                    taskIdField.value = taskIdField.value.substr(28);
-                }
-                resetResultTable();
-            }
-            let onLinesChange = function(){
-                tbody.innerHTML = "";
-                tfoot.innerHTML = "";
-                thead.innerHTML = "";
-                buildTableHeader(thead, tbody, tfoot);
-                updateResultTable(tbody, tfoot, totalRecords);
-                let url = new URL(window.location.href);
-                url.searchParams.set('lines', taskLinesBooty.value);
-                window.history.replaceState({},'Task Counter', url.toString());
-            }
-
-            datePickerStart.addEventListener('change', onStartChange);
-            datePickerEnd.addEventListener('change', onEndChange);
-            taskIdField.addEventListener('change', onTaskChange);
-            taskLinesBooty.addEventListener('change', onLinesChange)
-            createReport();
         });
     </script>
 </head>
@@ -432,25 +82,15 @@
         </ul>
     </section>
     <br>
-    <section id="resultHead" hidden>
-        <div class="center" id="taskName"></div>
-        <div class="center">From <span id="startTime">...</span> to <span id="endTime">...</span></div>
+    <section id="result">
+        <div class="center" id="loginResult"></div>
         <div class="center" id="computationTime"></div>
-        <div class="center">Seen <span id="seenRecords"></span> completions out of <span id="totalRecords"></span>.</div>
     </section>
-    <br>
-    <table class="center" id="reportTable">
-        <thead id="reportTableHead"></thead>
-        <tbody id="reportTableBody"></tbody>
-        <tfoot id="reportTableFoot"></tfoot>
-    </table>
     <br>
     <div class="center">
         <div id="loaderText" class="loaderText" hidden></div>
         <div id="loader" class="loader" hidden></div>
     </div>
-    <br>
-    <br>
     <br>
     <section>
         <h3>Heaven's Slavery System © 2023-2025</h3>
